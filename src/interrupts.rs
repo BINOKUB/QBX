@@ -65,8 +65,20 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
     if let Ok(Some(key_event)) = keyboard.add_byte(scancode) {
         if let Some(key) = keyboard.process_keyevent(key_event) {
             match key {
-                pc_keyboard::DecodedKey::Unicode(character) => print!("{}", character),
-                pc_keyboard::DecodedKey::RawKey(key) => print!("{:?}", key),
+                pc_keyboard::DecodedKey::Unicode(character) => {
+                    print!("{}", character);
+                }
+                pc_keyboard::DecodedKey::RawKey(key) => {
+                    if key == pc_keyboard::KeyCode::Escape {
+                        println!("\n[QBX] Extinction...");
+                        unsafe {
+                            let mut reset_port = Port::new(0x64);
+                            reset_port.write(0xFEu8); // Commande de reset CPU
+                        }
+                    } else {
+                        print!("{:?}", key);
+                    }
+                }
             }
         }
     }
