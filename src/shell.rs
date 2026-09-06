@@ -179,13 +179,21 @@ impl Shell {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 commandes::edt::executer(reste_args);
             }
+            "ls" => {
+                commandes::ls::executer();
+            }
+            "cat" => {
+                commandes::cat::executer(argument);
+            }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");
                 println!("  inf  : Informations système");
                 println!("  tmps : Horloge temps réel");
-                println!("  edt  : Éditeur de texte plein écran");
-                println!("  mnl  : Manuel système (ex: mnl ntr)");
+                println!("  edt  : Éditeur de texte (ex: edt -l test.txt)");
+                println!("  ls   : Lister les fichiers en mémoire");
+                println!("  cat  : Afficher le contenu d'un fichier");
+                println!("  mnl  : Manuel système (ex: mnl edt)");
                 println!("  qtr  : Quitter le système");
             }
             cmd => {

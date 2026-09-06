@@ -27,19 +27,17 @@ pub fn effacer_ecran_complet() {
 }
 
 // --- [FONCTION 3 : dessiner_barre_statut] ---
-// Description : Trace la ligne de séparation (ligne 23) et affiche le nom du fichier sur la barre d'état (ligne 24).
+// Description : Trace la ligne de séparation (ligne 23) et affiche le nom du fichier et les raccourcis sur la barre d'état (ligne 24).
 pub fn dessiner_barre_statut(nom_fichier: &str) {
-    // Ligne de séparation
     for x in 0..LARGEUR {
         ecrire_vga(x, 23, b'-', 0x07);
     }
 
-    // Barre d'état
     let mut col = 0;
     let entete = "=== QBX EDT | Fichier: ";
     for b in entete.bytes() { ecrire_vga(col, 24, b, 0x0f); col += 1; }
     for b in nom_fichier.bytes() { ecrire_vga(col, 24, b, 0x0e); col += 1; }
-    let suite = " | [ESC] Quitter ===";
+    let suite = " | [F2] Sauvegarder | [ESC] Quitter ===";
     for b in suite.bytes() {
         if col < LARGEUR { ecrire_vga(col, 24, b, 0x0f); col += 1; }
     }

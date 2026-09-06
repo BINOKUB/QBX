@@ -78,7 +78,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 }
 
 // --- [FONCTION 4 : keyboard_interrupt_handler] ---
-// Description : Lit le scancode sur le port 0x60, gère les caractères Unicode et redirige les flèches vers l'éditeur ou l'historique du Shell.
+// Description : Lit le scancode sur le port 0x60, traite les caractères Unicode et intercepte les flèches ainsi que F2 pour la sauvegarde EDT.
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
     use x86_64::instructions::port::Port;
     use pc_keyboard::KeyCode;
@@ -95,6 +95,11 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
                     SHELL.lock().introduire_caractere(character);
                 }
                 pc_keyboard::DecodedKey::RawKey(key_code) => match key_code {
+                    KeyCode::F2 => {
+                        if crate::commandes::edt::EDITEUR.lock().est_actif() {
+                            crate::commandes::edt::EDITEUR.lock().sauvegarder();
+                        }
+                    }
                     KeyCode::ArrowUp => {
                         if crate::commandes::edt::EDITEUR.lock().est_actif() {
                             crate::commandes::edt::EDITEUR.lock().deplacer_curseur(0, -1);

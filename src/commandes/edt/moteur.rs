@@ -1,6 +1,6 @@
-// QBX EDT Moteur - Révision 0.7
+// QBX EDT Moteur - Révision 0.9
 // Fichier : src/commandes/edt/moteur.rs
-// Description : Moteur de données avec support du défilement vertical (scrolling 100 lignes)
+// Description : Moteur de données de l'éditeur, défilement vertical et sauvegarde VFS
 
 use super::affichage::{self, LARGEUR, HAUTEUR_EDIT};
 
@@ -8,7 +8,7 @@ const HAUTEUR_MAX: usize = 100;
 const TAMPON_TAILLE: usize = LARGEUR * HAUTEUR_MAX;
 
 // --- [STRUCTURE 1 : Editeur] ---
-// Description : État interne de l'éditeur avec gestion du décalage de vue (scrolling).
+// Description : État interne de l'éditeur avec tampon texte, curseur 2D et nom du fichier.
 pub struct Editeur {
     tampon: [u8; TAMPON_TAILLE],
     curseur_x: usize,
@@ -22,6 +22,7 @@ pub struct Editeur {
 
 impl Editeur {
     // --- [FONCTION 1.1 : new] ---
+    // Description : Instancie un éditeur réinitialisé.
     pub const fn new() -> Self {
         Editeur {
             tampon: [0; TAMPON_TAILLE],
@@ -36,6 +37,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 1.2 : lancer] ---
+    // Description : Initialise une session d'édition plein écran avec les options choisies.
     pub fn lancer(&mut self, option_lignes: bool, nom: &str) {
         self.actif = true;
         self.tampon = [0; TAMPON_TAILLE];
@@ -55,11 +57,16 @@ impl Editeur {
     }
 
     // --- [FONCTION 1.3 : inserer_caractere] ---
+    // Description : Traite la saisie des caractères, le recul Backspace, le saut de ligne et Ctrl+S pour sauvegarder.
     pub fn inserer_caractere(&mut self, c: char) {
         if !self.actif { return; }
 
         match c {
+            // Échap (ESC) pour quitter
             '\x1b' => self.quitter(),
+            // Ctrl+S (Sauvegarder dans le VFS RAMDisk)
+            '\x13' => self.sauvegarder(),
+            // Backspace
             '\x08' | '\x7f' => {
                 if self.curseur_x > 0 {
                     self.curseur_x -= 1;
@@ -72,6 +79,7 @@ impl Editeur {
                 self.tampon[idx] = 0;
                 self.rafraichir_ecran();
             }
+            // Entrée (Nouvelle ligne)
             '\n' | '\r' => {
                 if self.curseur_y < HAUTEUR_MAX - 1 {
                     self.curseur_y += 1;
@@ -80,6 +88,7 @@ impl Editeur {
                     self.rafraichir_ecran();
                 }
             }
+            // Caractère standard
             caractere => {
                 let idx = self.curseur_y * LARGEUR + self.curseur_x;
                 if idx < TAMPON_TAILLE {
@@ -98,6 +107,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 1.4 : deplacer_curseur] ---
+    // Description : Modifie la position 2D du curseur et ajuste la vue d'affichage.
     pub fn deplacer_curseur(&mut self, dx: isize, dy: isize) {
         if !self.actif { return; }
 
@@ -124,7 +134,8 @@ impl Editeur {
         }
     }
 
-   // --- [FONCTION 1.6 : rafraichir_ecran] ---
+    // --- [FONCTION 1.6 : rafraichir_ecran] ---
+    // Description : Reconstruit la grille d'affichage 80x23 et positionne le curseur visuel.
     fn rafraichir_ecran(&self) {
         affichage::effacer_ecran_complet();
         let marge_x = if self.afficher_lignes { 4 } else { 0 };
@@ -139,7 +150,6 @@ impl Editeur {
                 let diz = ((num / 10) % 10) as u8 + b'0';
                 let uni = (num % 10) as u8 + b'0';
                 
-                // Alignement propre : espaces pour les zéros non significatifs
                 affichage::ecrire_vga(0, y_ecran, if num >= 100 { cent } else { b' ' }, 0x08);
                 affichage::ecrire_vga(1, y_ecran, if num >= 10 { diz } else { b' ' }, 0x08);
                 affichage::ecrire_vga(2, y_ecran, uni, 0x08);
@@ -164,6 +174,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 1.7 : quitter] ---
+    // Description : Désactive le mode d'édition et rétablit l'affichage du Shell.
     pub fn quitter(&mut self) {
         self.actif = false;
         crate::commandes::ntr::executer();
@@ -171,10 +182,30 @@ impl Editeur {
     }
 
     // --- [FONCTION 1.8 : est_actif] ---
+    // Description : Indique si l'éditeur intercepte actuellement le clavier.
     pub fn est_actif(&self) -> bool {
         self.actif
+    }
+
+    // --- [FONCTION 1.9 : sauvegarder] ---
+    // Description : Exporte le tampon texte courant vers le RamDisk VFS.
+    pub fn sauvegarder(&mut self) {
+        if self.nom_len == 0 { return; }
+        
+        let nom_str = match core::str::from_utf8(&self.nom_fichier[..self.nom_len]) {
+            Ok(s) => s,
+            Err(_) => "sans_titre.txt",
+        };
+
+        let succes = crate::fs::SYSTEME_FICHIERS.lock().ecrire(nom_str, &self.tampon);
+        
+        if succes {
+            affichage::ecrire_vga(70, 24, b'O', 0x2f);
+            affichage::ecrire_vga(71, 24, b'K', 0x2f);
+        }
     }
 }
 
 // --- [STATIC 1 : EDITEUR] ---
+// Description : Instance globale de l'éditeur de texte.
 pub static EDITEUR: spin::Mutex<Editeur> = spin::Mutex::new(Editeur::new());

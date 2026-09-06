@@ -12,6 +12,8 @@ mod shell;
 mod power;
 mod commandes;
 
+pub mod fs;
+
 use core::panic::PanicInfo;
 
 // --- [FONCTION 1 : gestionnaire_panic] ---

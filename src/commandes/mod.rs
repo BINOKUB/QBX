@@ -1,4 +1,4 @@
-// QBX Module Commandes - Révision 0.4
+// QBX Module Commandes - Révision 0.6
 // Fichier : src/commandes/mod.rs
 // Description : Exportation des modules de commandes individuelles
 
@@ -7,3 +7,5 @@ pub mod mnl;
 pub mod inf;
 pub mod tmps;
 pub mod edt;
+pub mod ls;
+pub mod cat;
