@@ -1,93 +1,68 @@
 // QBX Commande - Révision 0.3
 // Fichier : src/commandes/mnl.rs
-// Description : Manuel du système QBX au format UNIX (Pages man)
+// Description : Manuel du système QBX (Pages 'man' intégrées)
 
 use crate::println;
 
 // --- [FONCTION 1 : executer] ---
-// Description : Affiche la documentation au format UNIX traditionnel de la commande ciblée.
-pub fn executer(cible: &str) {
-    match cible {
+// Description : Affiche la documentation d'une commande passée en argument.
+pub fn executer(commande: &str) {
+    let cmd = commande.trim();
+
+    if cmd.is_empty() {
+        println!("Usage : mnl <commande>");
+        println!("Commandes disponibles : ntr, inf, tmps, edt, ls, cat, mnl, qtr");
+        return;
+    }
+
+    match cmd {
         "ntr" => {
-            println!("NTR(1)                   Manuel de référence QBX                  NTR(1)\n");
-            println!("NOM");
-            println!("    ntr - Nettoyer l'écran de la console\n");
-            println!("SYNOPSIS");
-            println!("    ntr\n");
-            println!("DESCRIPTION");
-            println!("    Efface l'intégralité du contenu de la grille texte VGA et replace");
-            println!("    le curseur matériel au coin supérieur gauche.\n");
-            println!("QBX v0.1.0                       Révision 0.1                       NTR(1)");
-        }
-        "qtr" => {
-            println!("QTR(1)                   Manuel de référence QBX                  QTR(1)\n");
-            println!("NOM");
-            println!("    qtr - Quitter et éteindre le système\n");
-            println!("SYNOPSIS");
-            println!("    qtr\n");
-            println!("DESCRIPTION");
-            println!("    Déclenche l'extinction matérielle de la machine virtuelle via les");
-            println!("    ports d'alimentation ACPI/APM.\n");
-            println!("QBX v0.1.0                       Révision 0.2                       QTR(1)");
+            println!("=== MANUEL : ntr ===");
+            println!("Description : Nettoie l'écran du terminal.");
+            println!("Usage       : ntr");
         }
         "inf" => {
-            println!("INF(1)                   Manuel de référence QBX                  INF(1)\n");
-            println!("NOM");
-            println!("    inf - Informations système et noyau\n");
-            println!("SYNOPSIS");
-            println!("    inf\n");
-            println!("DESCRIPTION");
-            println!("    Affiche l'architecture du processeur, le mode d'affichage VGA,");
-            println!("    la version courante du noyau et le statut de l'énergie.\n");
-            println!("QBX v0.1.0                       Révision 0.1                       INF(1)");
+            println!("=== MANUEL : inf ===");
+            println!("Description : Affiche les informations de version et du noyau QBX.");
+            println!("Usage       : inf");
         }
         "tmps" => {
-            println!("TMPS(1)                  Manuel de référence QBX                 TMPS(1)\n");
-            println!("NOM");
-            println!("    tmps - Horloge temps réel (RTC)\n");
-            println!("SYNOPSIS");
-            println!("    tmps\n");
-            println!("DESCRIPTION");
-            println!("    Interroge les registres matériels CMOS (ports 0x70/0x71) pour");
-            println!("    afficher l'heure système en direct.\n");
-            println!("QBX v0.1.0                       Révision 0.1                      TMPS(1)");
-        }
-        "mnl" => {
-            println!("MNL(1)                   Manuel de référence QBX                  MNL(1)\n");
-            println!("NOM");
-            println!("    mnl - Manuel du système\n");
-            println!("SYNOPSIS");
-            println!("    mnl <commande>\n");
-            println!("DESCRIPTION");
-            println!("    Affiche la page de manuel au format UNIX de la commande spécifiée.\n");
-            println!("QBX v0.1.0                       Révision 0.3                       MNL(1)");
+            println!("=== MANUEL : tmps ===");
+            println!("Description : Affiche l'heure actuelle du système.");
+            println!("Usage       : tmps");
         }
         "edt" => {
-            println!("EDT(1)                   Manuel de référence QBX                  EDT(1)\n");
-            println!("NOM");
-            println!("    edt - Éditeur de texte plein écran\n");
-            println!("SYNOPSIS");
-            println!("    edt\n");
-            println!("DESCRIPTION");
-            println!("    Ouvre un espace d'édition de texte 80x23 en mémoire RAM.");
-            println!("    Appuyez sur la touche [ESC] pour quitter l'éditeur.\n");
-            println!("QBX v0.1.0                       Révision 0.1                       EDT(1)");
+            println!("=== MANUEL : edt ===");
+            println!("Description : Éditeur de texte plein écran avec défilement.");
+            println!("Usage       : edt [-l] [fichier]");
+            println!("Options     : -l (Affiche les numéros de ligne)");
+            println!("Raccourcis  : [F2] Sauvegarder dans le RamDisk | [ESC] Quitter");
         }
-        "aide" => {
-            println!("AIDE(1)                  Manuel de référence QBX                 AIDE(1)\n");
-            println!("NOM");
-            println!("    aide - Sommaire des commandes\n");
-            println!("SYNOPSIS");
-            println!("    aide\n");
-            println!("DESCRIPTION");
-            println!("    Affiche le sommaire rapide de toutes les commandes installées.\n");
-            println!("QBX v0.1.0                       Révision 0.5                      AIDE(1)");
+        "ls" => {
+            println!("=== MANUEL : ls ===");
+            println!("Description : Liste les fichiers enregistrés dans le système VFS (RAMDisk).");
+            println!("Usage       : ls");
+            println!("Affiche     : Nom du fichier et sa taille en octets.");
         }
-        "" => {
-            println!("Usage : mnl <commande> (Exemple : mnl inf)");
+        "cat" => {
+            println!("=== MANUEL : cat ===");
+            println!("Description : Affiche le contenu d'un fichier texte en mémoire.");
+            println!("Usage       : cat <nom_fichier>");
+            println!("Exemple     : cat notes.txt");
         }
-        cmd => {
-            println!("Pas de page de manuel pour '{}'", cmd);
+        "mnl" => {
+            println!("=== MANUEL : mnl ===");
+            println!("Description : Affiche la page de manuel d'une commande donnée.");
+            println!("Usage       : mnl <commande>");
+        }
+        "qtr" => {
+            println!("=== MANUEL : qtr ===");
+            println!("Description : Arrête proprement le noyau QBX (Shutdown ACPI).");
+            println!("Usage       : qtr");
+        }
+        inconnu => {
+            println!("Aucune page de manuel pour : {}", inconnu);
+            println!("Tapez 'mnl' sans argument pour voir la liste des commandes.");
         }
     }
 }
