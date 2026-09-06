@@ -1,5 +1,12 @@
+// QBX VGA Buffer Module - Révision 0.3
+// Fichier : src/vga_buffer.rs
+// Description : Pilote texte VGA avec gestion matérielle du curseur (ports 0x3D4/0x3D5)
+
 use core::fmt;
 use volatile::Volatile;
+use lazy_static::lazy_static;
+use spin::Mutex;
+use x86_64::instructions::port::Port;
 
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -55,7 +62,6 @@ pub struct Ecrivain {
 }
 
 impl Ecrivain {
-    // Convertit un char Unicode (UTF-8) vers la table de caractères CP437 du mode texte VGA
     fn char_vers_cp437(c: char) -> u8 {
         match c {
             'é' => 0x82,
@@ -76,29 +82,22 @@ impl Ecrivain {
             'É' => 0x90,
             'À' => 0x80,
             'Ç' => 0x80,
-            c if (c as u32) <= 0x7F => c as u8, // Caractères ASCII standard (0-127)
-            _ => 0xfe, // Caractère non supporté (carré plein)
+            c if (c as u32) <= 0x7F => c as u8,
+            _ => 0xfe,
         }
     }
 
-    pub fn ecrire_octet(&mut self, octet: u8) {
-        match octet {
-            b'\n' => self.nouvelle_ligne(),
-            octet => {
-                if self.colonne_position >= LARGEUR_BUFFER {
-                    self.nouvelle_ligne();
-                }
+    fn mettre_a_jour_curseur(&self) {
+        let position = (HAUTEUR_BUFFER - 1) * LARGEUR_BUFFER + self.colonne_position;
+        unsafe {
+            let mut port_index = Port::<u8>::new(0x3D4);
+            let mut port_donnee = Port::<u8>::new(0x3D5);
 
-                let ligne = HAUTEUR_BUFFER - 1;
-                let colonne = self.colonne_position;
+            port_index.write(0x0F);
+            port_donnee.write((position & 0xFF) as u8);
 
-                let code_couleur = self.code_couleur;
-                self.buffer.caracteres[ligne][colonne].write(CaractereEcran {
-                    caractere_ascii: octet,
-                    code_couleur,
-                });
-                self.colonne_position += 1;
-            }
+            port_index.write(0x0E);
+            port_donnee.write(((position >> 8) & 0xFF) as u8);
         }
     }
 
@@ -125,6 +124,35 @@ impl Ecrivain {
                 }
             }
         }
+        self.mettre_a_jour_curseur();
+    }
+
+    pub fn effacer_dernier_caractere(&mut self) {
+        if self.colonne_position > 0 {
+            self.colonne_position -= 1;
+            let ligne = HAUTEUR_BUFFER - 1;
+            let colonne = self.colonne_position;
+            let code_couleur = self.code_couleur;
+            self.buffer.caracteres[ligne][colonne].write(CaractereEcran {
+                caractere_ascii: b' ',
+                code_couleur,
+            });
+            self.mettre_a_jour_curseur();
+        }
+    }
+
+    pub fn nettoyer_ecran(&mut self) {
+        let vide = CaractereEcran {
+            caractere_ascii: b' ',
+            code_couleur: self.code_couleur,
+        };
+        for ligne in 0..HAUTEUR_BUFFER {
+            for colonne in 0..LARGEUR_BUFFER {
+                self.buffer.caracteres[ligne][colonne].write(vide);
+            }
+        }
+        self.colonne_position = 0;
+        self.mettre_a_jour_curseur();
     }
 
     fn nouvelle_ligne(&mut self) {
@@ -156,15 +184,16 @@ impl fmt::Write for Ecrivain {
     }
 }
 
-use lazy_static::lazy_static;
-use spin::Mutex;
-
 lazy_static! {
     pub static ref ECRIVAIN: Mutex<Ecrivain> = Mutex::new(Ecrivain {
         colonne_position: 0,
         code_couleur: CodeCouleur::nouveau(Couleur::VertClair, Couleur::Noir),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     });
+}
+
+pub fn clear_screen() {
+    ECRIVAIN.lock().nettoyer_ecran();
 }
 
 #[macro_export]

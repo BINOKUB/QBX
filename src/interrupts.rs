@@ -55,8 +55,10 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
     }
 }
 
+// Une seule fonction propre pour l'interruption clavier
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
     use x86_64::instructions::port::Port;
+    use crate::shell::SHELL;
 
     let mut port = Port::new(0x60);
     let scancode: u8 = unsafe { port.read() };
@@ -66,19 +68,9 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
         if let Some(key) = keyboard.process_keyevent(key_event) {
             match key {
                 pc_keyboard::DecodedKey::Unicode(character) => {
-                    print!("{}", character);
+                    SHELL.lock().introduire_caractere(character);
                 }
-                pc_keyboard::DecodedKey::RawKey(key) => {
-                    if key == pc_keyboard::KeyCode::Escape {
-                        println!("\n[QBX] Extinction...");
-                        unsafe {
-                            let mut reset_port = Port::new(0x64);
-                            reset_port.write(0xFEu8); // Commande de reset CPU
-                        }
-                    } else {
-                        print!("{:?}", key);
-                    }
-                }
+                pc_keyboard::DecodedKey::RawKey(_key) => {}
             }
         }
     }
