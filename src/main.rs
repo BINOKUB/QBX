@@ -18,14 +18,16 @@ pub extern "C" fn _start() -> ! {
     println!("=== QBX (Québec UNIX) v0.1 ===");
     println!("Initialisation du système...");
 
-    // Initialisation des interruptions
     interrupts::init_idt();
-    println!("Table IDT chargée : OK");
+    println!("Table IDT : OK");
 
-    // Test d'interruption logicielle
-    x86_64::instructions::interrupts::int3();
+    unsafe { interrupts::PICS.lock().initialize() };
+    x86_64::instructions::interrupts::enable();
+    println!("Interruptions matérielles : OK");
 
-    println!("Chargement du noyau bare-metal terminé.");
+    println!("\nPrêt ! Tapez au clavier :");
 
-    loop {}
+    loop {
+        x86_64::instructions::hlt();
+    }
 }
