@@ -48,7 +48,7 @@ impl Shell {
         }
     }
 
-    fn executer_commande(&mut self) {
+   fn executer_commande(&mut self) {
         let entree = core::str::from_utf8(&self.buffer[..self.cursor])
             .unwrap_or("")
             .trim();
@@ -59,20 +59,23 @@ impl Shell {
 
         let mut parties = entree.split_whitespace();
         let commande = parties.next().unwrap_or("");
+        let argument = parties.next().unwrap_or(""); // Récupère le paramètre (ex: "ntr" dans "mnl ntr")
 
         match commande {
-            // Extinction du système
             "qtr" => {
                 println!("[QBX] Extinction du système...");
                 power::eteindre();
             }
-            // Nettoyage de l'écran
             "ntr" => {
                 commandes::ntr::executer();
+            }
+            "mnl" => {
+                commandes::mnl::executer(argument);
             }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");
+                println!("  mnl  : Manuel système (ex: mnl ntr)");
                 println!("  qtr  : Quitter le système");
                 println!("  aide : Afficher ce menu");
             }
