@@ -62,6 +62,17 @@ pub fn executer(cible: &str) {
             println!("    Affiche la page de manuel au format UNIX de la commande spécifiée.\n");
             println!("QBX v0.1.0                       Révision 0.3                       MNL(1)");
         }
+        "edt" => {
+            println!("EDT(1)                   Manuel de référence QBX                  EDT(1)\n");
+            println!("NOM");
+            println!("    edt - Éditeur de texte plein écran\n");
+            println!("SYNOPSIS");
+            println!("    edt\n");
+            println!("DESCRIPTION");
+            println!("    Ouvre un espace d'édition de texte 80x23 en mémoire RAM.");
+            println!("    Appuyez sur la touche [ESC] pour quitter l'éditeur.\n");
+            println!("QBX v0.1.0                       Révision 0.1                       EDT(1)");
+        }
         "aide" => {
             println!("AIDE(1)                  Manuel de référence QBX                 AIDE(1)\n");
             println!("NOM");

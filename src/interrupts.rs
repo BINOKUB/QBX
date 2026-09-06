@@ -78,7 +78,7 @@ extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFr
 }
 
 // --- [FONCTION 4 : keyboard_interrupt_handler] ---
-// Description : Lit le scancode sur le port 0x60, gère les caractères Unicode et intercepte les flèches directionnelles pour l'historique du Shell.
+// Description : Lit le scancode sur le port 0x60, gère les caractères Unicode et redirige les flèches vers l'éditeur ou l'historique du Shell.
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
     use x86_64::instructions::port::Port;
     use pc_keyboard::KeyCode;
@@ -96,10 +96,28 @@ extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStac
                 }
                 pc_keyboard::DecodedKey::RawKey(key_code) => match key_code {
                     KeyCode::ArrowUp => {
-                        SHELL.lock().historique_precedent();
+                        if crate::commandes::edt::EDITEUR.lock().est_actif() {
+                            crate::commandes::edt::EDITEUR.lock().deplacer_curseur(0, -1);
+                        } else {
+                            SHELL.lock().historique_precedent();
+                        }
                     }
                     KeyCode::ArrowDown => {
-                        SHELL.lock().historique_suivant();
+                        if crate::commandes::edt::EDITEUR.lock().est_actif() {
+                            crate::commandes::edt::EDITEUR.lock().deplacer_curseur(0, 1);
+                        } else {
+                            SHELL.lock().historique_suivant();
+                        }
+                    }
+                    KeyCode::ArrowLeft => {
+                        if crate::commandes::edt::EDITEUR.lock().est_actif() {
+                            crate::commandes::edt::EDITEUR.lock().deplacer_curseur(-1, 0);
+                        }
+                    }
+                    KeyCode::ArrowRight => {
+                        if crate::commandes::edt::EDITEUR.lock().est_actif() {
+                            crate::commandes::edt::EDITEUR.lock().deplacer_curseur(1, 0);
+                        }
                     }
                     _ => {}
                 },

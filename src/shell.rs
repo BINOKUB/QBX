@@ -1,6 +1,6 @@
-// QBX Shell Module - Révision 0.8
+// QBX Shell Module - Révision 0.9
 // Fichier : src/shell.rs
-// Description : Gestionnaire de ligne de commande avec tampon d'entrée, routage et historique de commandes via les flèches Haut/Bas
+// Description : Gestionnaire de ligne de commande avec tampon d'entrée, routage edt/inf/tmps et historique de commandes via les flèches
 
 use crate::{commandes, print, println, power, vga_buffer};
 use spin::Mutex;
@@ -35,8 +35,14 @@ impl Shell {
     }
 
     // --- [FONCTION 1.2 : introduire_caractere] ---
-    // Description : Traite la saisie des caractères imprimables, de la touche Entrée et du Backspace.
+    // Description : Traite la saisie des caractères, redirige vers edt si actif, gère Entrée et Backspace.
     pub fn introduire_caractere(&mut self, c: char) {
+        // Si l'éditeur plein écran est actif, on lui redirige les touches directement
+        if commandes::edt::EDITEUR.lock().est_actif() {
+            commandes::edt::EDITEUR.lock().inserer_caractere(c);
+            return;
+        }
+
         match c {
             '\n' | '\r' => {
                 println!();
@@ -168,11 +174,17 @@ impl Shell {
             "tmps" => {
                 commandes::tmps::executer();
             }
+            "edt" => {
+                // Transmet le reste de la ligne saisie après 'edt'
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::edt::executer(reste_args);
+            }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");
                 println!("  inf  : Informations système");
                 println!("  tmps : Horloge temps réel");
+                println!("  edt  : Éditeur de texte plein écran");
                 println!("  mnl  : Manuel système (ex: mnl ntr)");
                 println!("  qtr  : Quitter le système");
             }
