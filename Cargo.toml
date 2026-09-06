@@ -1,5 +1,5 @@
 [package]
-name = "QBX"
+name = "qbx"
 version = "0.1.0"
 edition = "2021"
 
@@ -11,6 +11,11 @@ spin = "0.5.2"
 [dependencies.lazy_static]
 version = "1.4.0"
 features = ["spin_no_std"]
+
+[dependencies.x86_64]
+version = "0.14.10"
+default-features = false
+features = ["instructions", "abi_x86_interrupt"]
 
 [profile.dev]
 panic = "abort"

@@ -55,6 +55,32 @@ pub struct Ecrivain {
 }
 
 impl Ecrivain {
+    // Convertit un char Unicode (UTF-8) vers la table de caractères CP437 du mode texte VGA
+    fn char_vers_cp437(c: char) -> u8 {
+        match c {
+            'é' => 0x82,
+            'è' => 0x8a,
+            'ê' => 0x88,
+            'ë' => 0x89,
+            'à' => 0x85,
+            'â' => 0x83,
+            'ä' => 0x84,
+            'î' => 0x8c,
+            'ï' => 0x8b,
+            'ô' => 0x93,
+            'ö' => 0x94,
+            'ù' => 0x97,
+            'û' => 0x96,
+            'ü' => 0x81,
+            'ç' => 0x87,
+            'É' => 0x90,
+            'À' => 0x80,
+            'Ç' => 0x80,
+            c if (c as u32) <= 0x7F => c as u8, // Caractères ASCII standard (0-127)
+            _ => 0xfe, // Caractère non supporté (carré plein)
+        }
+    }
+
     pub fn ecrire_octet(&mut self, octet: u8) {
         match octet {
             b'\n' => self.nouvelle_ligne(),
@@ -77,10 +103,26 @@ impl Ecrivain {
     }
 
     pub fn ecrire_chaine(&mut self, s: &str) {
-        for octet in s.bytes() {
-            match octet {
-                0x20..=0x7e | b'\n' => self.ecrire_octet(octet),
-                _ => self.ecrire_octet(0xfe), // Caractere inconnu
+        for c in s.chars() {
+            match c {
+                '\n' => self.nouvelle_ligne(),
+                caractere => {
+                    let octet_cp437 = Self::char_vers_cp437(caractere);
+                    
+                    if self.colonne_position >= LARGEUR_BUFFER {
+                        self.nouvelle_ligne();
+                    }
+
+                    let ligne = HAUTEUR_BUFFER - 1;
+                    let colonne = self.colonne_position;
+                    let code_couleur = self.code_couleur;
+
+                    self.buffer.caracteres[ligne][colonne].write(CaractereEcran {
+                        caractere_ascii: octet_cp437,
+                        code_couleur,
+                    });
+                    self.colonne_position += 1;
+                }
             }
         }
     }
