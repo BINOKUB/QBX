@@ -1,6 +1,6 @@
-// QBX Commande - Révision 0.4
+// QBX Commande - Révision 0.6
 // Fichier : src/commandes/mnl.rs
-// Description : Manuel du système QBX (Pages 'man' intégrées style UNIX classique)
+// Description : Manuel du système QBX (Pages 'man' compactes adaptées au format VGA 80x25)
 
 use crate::println;
 
@@ -50,16 +50,20 @@ pub fn executer(commande: &str) {
             println!("QBX v0.1.0                      Révision 0.1                     TMPS(1)");
         }
         "edt" => {
-            println!("EDT(1)                      Manuel de référence QBX                      EDT(1)\n");
+            println!("EDT(1)                      Manuel de référence QBX                      EDT(1)");
             println!("NOM");
-            println!("     edt - Éditeur de texte plein écran\n");
+            println!("     edt - Éditeur de texte plein écran (80x23)");
             println!("SYNOPSIS");
-            println!("     edt [-l] [fichier]\n");
+            println!("     edt [-l] [fichier]");
             println!("DESCRIPTION");
-            println!("     Ouvre un espace d'édition de texte 80x23 en mémoire RAM.");
-            println!("     Appuyez sur la touche [F2] pour sauvegarder dans le RamDisk.");
-            println!("     Appuyez sur la touche [ESC] pour quitter l'éditeur.\n");
-            println!("QBX v0.1.0                      Révision 0.1                      EDT(1)");
+            println!("     Éditeur RAMDisk. Sans nom au démarrage (tampon anonyme volatile).");
+            println!("     Modifications en mémoire, sauvegarde explicite.");
+            println!("OPTIONS & TOUCHES DE CONTRÔLE");
+            println!("     -l    : Affiche les numéros de ligne dynamiques.");
+            println!("     [F2]  : Sauvegarder dans le VFS       [F5] : Coller le presse-papier");
+            println!("     [F3]  : Copier bloc ou ligne courante [F6] : Ancrer/désancrer un bloc");
+            println!("     [F4]  : Couper bloc ou ligne courante [ESC]: Quitter l'éditeur");
+            println!("QBX v0.1.0                      Révision 0.2                      EDT(1)");
         }
         "ls" => {
             println!("LS(1)                       Manuel de référence QBX                       LS(1)\n");
