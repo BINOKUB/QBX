@@ -63,7 +63,7 @@ fn synchroniser_caps_lock() {
 // --- [FONCTION 3 : kernel_main] ---
 // Description : Point d'entrée principal du noyau.
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    println!("=== QBX (Québec UNIX) v0.1 ===");
+    println!("=== QBX - EXP (Québec UNIX) v0.1 ===");
     println!("Initialisation du système...");
 
     interrupts::init_idt();
@@ -78,7 +78,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         panic!("Échec de l'initialisation du Heap : {:?}", e);
     }
 
-    println!("Heap 100 KiB : OK");
+    println!("Heap 2 MiB : OK");
     println!("Système prêt.\n");
     print!("qbx:{}> ", fs::chemin_actuel()); // <-- Le prompt corrigé est bien placé ici
 
