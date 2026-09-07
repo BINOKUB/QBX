@@ -1,211 +1,173 @@
-// QBX EDT Moteur - Révision 0.9
+// QBX EDT Engine - Révision 1.3
 // Fichier : src/commandes/edt/moteur.rs
-// Description : Moteur de données de l'éditeur, défilement vertical et sauvegarde VFS
+// Description : Moteur réorganisé, compatible VGA direct et file asynchrone (Corrections F2 et ESC)
 
-use super::affichage::{self, LARGEUR, HAUTEUR_EDIT};
-
-const HAUTEUR_MAX: usize = 100;
-const TAMPON_TAILLE: usize = LARGEUR * HAUTEUR_MAX;
+use alloc::vec::Vec;
+use spin::Mutex;
+use pc_keyboard::{DecodedKey, KeyCode};
+use crate::commandes::edt::affichage;
+use crate::fs;
+use crate::vga_buffer;
 
 // --- [STRUCTURE 1 : Editeur] ---
-// Description : État interne de l'éditeur avec tampon texte, curseur 2D et nom du fichier.
+// Description : Gère l'état complet de l'éditeur de texte.
 pub struct Editeur {
-    tampon: [u8; TAMPON_TAILLE],
-    curseur_x: usize,
-    curseur_y: usize,
-    decalage_y: usize,
-    actif: bool,
-    afficher_lignes: bool,
-    nom_fichier: [u8; 32],
-    nom_len: usize,
+    pub tampon: Vec<u8>,
+    pub curseur_pos: usize,
+    pub taille_texte: usize,
+    pub ligne_debut: usize,
+    pub option_l: bool,
+    pub nom_fichier: [u8; 32],
+    pub taille_nom: usize,
+    pub actif: bool,
 }
 
 impl Editeur {
-    // --- [FONCTION 1.1 : new] ---
-    // Description : Instancie un éditeur réinitialisé.
+    // --- [FONCTION 1 : new] ---
+    // Description : Instancie un nouvel objet Editeur réinitialisé.
     pub const fn new() -> Self {
         Editeur {
-            tampon: [0; TAMPON_TAILLE],
-            curseur_x: 0,
-            curseur_y: 0,
-            decalage_y: 0,
-            actif: false,
-            afficher_lignes: false,
+            tampon: Vec::new(),
+            curseur_pos: 0,
+            taille_texte: 0,
+            ligne_debut: 0,
+            option_l: false,
             nom_fichier: [0; 32],
-            nom_len: 0,
+            taille_nom: 0,
+            actif: false,
         }
     }
 
-    // --- [FONCTION 1.2 : lancer] ---
-    // Description : Initialise une session d'édition plein écran avec les options choisies.
-    pub fn lancer(&mut self, option_lignes: bool, nom: &str) {
-        self.actif = true;
-        self.tampon = [0; TAMPON_TAILLE];
-        self.curseur_x = 0;
-        self.curseur_y = 0;
-        self.decalage_y = 0;
-        self.afficher_lignes = option_lignes;
-
-        self.nom_len = 0;
-        for b in nom.bytes() {
-            if self.nom_len < 32 {
-                self.nom_fichier[self.nom_len] = b;
-                self.nom_len += 1;
-            }
-        }
-        self.rafraichir_ecran();
-    }
-
-    // --- [FONCTION 1.3 : inserer_caractere] ---
-    // Description : Traite la saisie des caractères, le recul Backspace, le saut de ligne et Ctrl+S pour sauvegarder.
-    pub fn inserer_caractere(&mut self, c: char) {
-        if !self.actif { return; }
-
-        match c {
-            // Échap (ESC) pour quitter
-            '\x1b' => self.quitter(),
-            // Ctrl+S (Sauvegarder dans le VFS RAMDisk)
-            '\x13' => self.sauvegarder(),
-            // Backspace
-            '\x08' | '\x7f' => {
-                if self.curseur_x > 0 {
-                    self.curseur_x -= 1;
-                } else if self.curseur_y > 0 {
-                    self.curseur_y -= 1;
-                    self.curseur_x = LARGEUR - 1;
-                    self.ajuster_scrolling();
-                }
-                let idx = self.curseur_y * LARGEUR + self.curseur_x;
-                self.tampon[idx] = 0;
-                self.rafraichir_ecran();
-            }
-            // Entrée (Nouvelle ligne)
-            '\n' | '\r' => {
-                if self.curseur_y < HAUTEUR_MAX - 1 {
-                    self.curseur_y += 1;
-                    self.curseur_x = 0;
-                    self.ajuster_scrolling();
-                    self.rafraichir_ecran();
-                }
-            }
-            // Caractère standard
-            caractere => {
-                let idx = self.curseur_y * LARGEUR + self.curseur_x;
-                if idx < TAMPON_TAILLE {
-                    self.tampon[idx] = caractere as u8;
-                    if self.curseur_x < LARGEUR - 1 {
-                        self.curseur_x += 1;
-                    } else if self.curseur_y < HAUTEUR_MAX - 1 {
-                        self.curseur_x = 0;
-                        self.curseur_y += 1;
-                        self.ajuster_scrolling();
-                    }
-                    self.rafraichir_ecran();
-                }
-            }
-        }
-    }
-
-    // --- [FONCTION 1.4 : deplacer_curseur] ---
-    // Description : Modifie la position 2D du curseur et ajuste la vue d'affichage.
-    pub fn deplacer_curseur(&mut self, dx: isize, dy: isize) {
-        if !self.actif { return; }
-
-        if dx < 0 && self.curseur_x > 0 { self.curseur_x -= 1; }
-        else if dx > 0 && self.curseur_x < LARGEUR - 1 { self.curseur_x += 1; }
-
-        if dy < 0 && self.curseur_y > 0 {
-            self.curseur_y -= 1;
-        } else if dy > 0 && self.curseur_y < HAUTEUR_MAX - 1 {
-            self.curseur_y += 1;
-        }
-
-        self.ajuster_scrolling();
-        self.rafraichir_ecran();
-    }
-
-    // --- [FONCTION 1.5 : ajuster_scrolling] ---
-    // Description : Recadre la fenêtre d'affichage (decalage_y) en fonction de la position du curseur.
-    fn ajuster_scrolling(&mut self) {
-        if self.curseur_y < self.decalage_y {
-            self.decalage_y = self.curseur_y;
-        } else if self.curseur_y >= self.decalage_y + HAUTEUR_EDIT {
-            self.decalage_y = self.curseur_y - HAUTEUR_EDIT + 1;
-        }
-    }
-
-    // --- [FONCTION 1.6 : rafraichir_ecran] ---
-    // Description : Reconstruit la grille d'affichage 80x23 et positionne le curseur visuel.
-    fn rafraichir_ecran(&self) {
-        affichage::effacer_ecran_complet();
-        let marge_x = if self.afficher_lignes { 4 } else { 0 };
-
-        for y_ecran in 0..HAUTEUR_EDIT {
-            let y_virtuel = self.decalage_y + y_ecran;
-            if y_virtuel >= HAUTEUR_MAX { break; }
-
-            if self.afficher_lignes {
-                let num = y_virtuel + 1;
-                let cent = ((num / 100) % 10) as u8 + b'0';
-                let diz = ((num / 10) % 10) as u8 + b'0';
-                let uni = (num % 10) as u8 + b'0';
-                
-                affichage::ecrire_vga(0, y_ecran, if num >= 100 { cent } else { b' ' }, 0x08);
-                affichage::ecrire_vga(1, y_ecran, if num >= 10 { diz } else { b' ' }, 0x08);
-                affichage::ecrire_vga(2, y_ecran, uni, 0x08);
-                affichage::ecrire_vga(3, y_ecran, b'|', 0x08);
-            }
-
-            for x in 0..(LARGEUR - marge_x) {
-                let idx = y_virtuel * LARGEUR + x;
-                let octet = self.tampon[idx];
-                let caractere = if octet != 0 { octet } else { b' ' };
-                let couleur = if x == self.curseur_x && y_virtuel == self.curseur_y {
-                    0x2f
-                } else {
-                    0x02
-                };
-                affichage::ecrire_vga(x + marge_x, y_ecran, caractere, couleur);
-            }
-        }
-
-        let nom_str = core::str::from_utf8(&self.nom_fichier[..self.nom_len]).unwrap_or("sans_titre");
-        affichage::dessiner_barre_statut(nom_str);
-    }
-
-    // --- [FONCTION 1.7 : quitter] ---
-    // Description : Désactive le mode d'édition et rétablit l'affichage du Shell.
-    pub fn quitter(&mut self) {
-        self.actif = false;
-        crate::commandes::ntr::executer();
-        crate::println!("[EDT] Fermeture de l'éditeur.");
-    }
-
-    // --- [FONCTION 1.8 : est_actif] ---
-    // Description : Indique si l'éditeur intercepte actuellement le clavier.
+    // --- [FONCTION 2 : est_actif] ---
+    // Description : Renvoie un booléen indiquant si l'éditeur est en cours d'utilisation.
     pub fn est_actif(&self) -> bool {
         self.actif
     }
 
-    // --- [FONCTION 1.9 : sauvegarder] ---
-    // Description : Exporte le tampon texte courant vers le RamDisk VFS.
-    pub fn sauvegarder(&mut self) {
-        if self.nom_len == 0 { return; }
-        
-        let nom_str = match core::str::from_utf8(&self.nom_fichier[..self.nom_len]) {
-            Ok(s) => s,
-            Err(_) => "sans_titre.txt",
-        };
+    // --- [FONCTION 3 : lancer] ---
+    // Description : Initialise l'éditeur, force un nom par défaut si vide (corrige le bug F2), et charge le contenu.
+    pub fn lancer(&mut self, option_l: bool, nom_fichier: &str) {
+        self.option_l = option_l;
+        self.curseur_pos = 0;
+        self.ligne_debut = 0;
+        self.actif = true;
 
-        let succes = crate::fs::SYSTEME_FICHIERS.lock().ecrire(nom_str, &self.tampon);
-        
-        if succes {
-            affichage::ecrire_vga(70, 24, b'O', 0x2f);
-            affichage::ecrire_vga(71, 24, b'K', 0x2f);
+        // Correction : Si aucun nom n'est fourni, on impose "sans_titre.txt"
+        let nom_final = if nom_fichier.trim().is_empty() { "sans_titre.txt" } else { nom_fichier };
+
+        let bytes = nom_final.as_bytes();
+        self.taille_nom = bytes.len().min(32);
+        self.nom_fichier[..self.taille_nom].copy_from_slice(&bytes[..self.taille_nom]);
+
+        if let Some(contenu) = fs::lire(nom_final) {
+            self.tampon = contenu.to_vec();
+            self.taille_texte = self.tampon.len();
+            self.curseur_pos = self.taille_texte;
+        } else {
+            self.tampon = Vec::new();
+            self.taille_texte = 0;
         }
+
+        // On dessine l'interface et on retourne immédiatement.
+        affichage::dessiner_interface(self);
+    }
+
+    // --- [FONCTION 4 : quitter] ---
+    // Description : Désactive l'éditeur, efface proprement l'écran VGA et restitue le prompt.
+    pub fn quitter(&mut self) {
+        self.actif = false;
+        // Correction : on utilise la fonction du module VGA pour synchroniser le curseur matériel
+        vga_buffer::clear_screen();
+        crate::print!("qbx> ");
+    }
+
+    // --- [FONCTION 5 : sauvegarder] ---
+    // Description : Alias pour enregistrer le fichier.
+    pub fn sauvegarder(&self) {
+        self.enregistrer();
+    }
+
+    // --- [FONCTION 6 : enregistrer] ---
+    // Description : Écrit le contenu du tampon dynamique dans le système de fichiers (VFS).
+    pub fn enregistrer(&self) {
+        if self.taille_nom > 0 {
+            if let Ok(nom) = core::str::from_utf8(&self.nom_fichier[..self.taille_nom]) {
+                fs::ecrire(nom, &self.tampon);
+            }
+        }
+    }
+
+    // --- [FONCTION 7 : inserer_caractere] ---
+    // Description : Insère un caractère ou un saut de ligne dans le tampon à la position du curseur.
+    pub fn inserer_caractere(&mut self, c: char) {
+        if c == '\n' || (c >= ' ' && c <= '~') {
+            if self.curseur_pos <= self.tampon.len() {
+                self.tampon.insert(self.curseur_pos, c as u8);
+                self.curseur_pos += 1;
+                self.taille_texte += 1;
+            }
+        }
+    }
+
+    // --- [FONCTION 8 : supprimer_caractere] ---
+    // Description : Supprime le caractère situé juste avant le curseur (Backspace).
+    pub fn supprimer_caractere(&mut self) {
+        if self.curseur_pos > 0 && !self.tampon.is_empty() {
+            self.curseur_pos -= 1;
+            self.tampon.remove(self.curseur_pos);
+            self.taille_texte -= 1;
+        }
+    }
+
+    // --- [FONCTION 9 : deplacer_curseur] ---
+    // Description : Ajuste la position du curseur en fonction des flèches directionnelles et met à jour l'écran.
+    pub fn deplacer_curseur(&mut self, dx: isize, dy: isize) {
+        if dy < 0 && self.ligne_debut > 0 {
+            self.ligne_debut -= 1;
+        } else if dy > 0 {
+            self.ligne_debut += 1;
+        }
+
+        if dx < 0 && self.curseur_pos > 0 {
+            self.curseur_pos -= 1;
+        } else if dx > 0 && self.curseur_pos < self.taille_texte {
+            self.curseur_pos += 1;
+        }
+
+        affichage::dessiner_interface(self);
+    }
+
+    // --- [FONCTION 10 : traiter_touche] ---
+    // Description : Analyse les touches reçues (incluant l'échappement ASCII) et déclenche l'action associée.
+    pub fn traiter_touche(&mut self, key: DecodedKey) -> bool {
+        match key {
+            // Correction : Capture du code brut ESC et du caractère ASCII 27 (Échap)
+            DecodedKey::RawKey(KeyCode::Escape) | DecodedKey::Unicode('\x1b') => {
+                self.quitter();
+                return true;
+            }
+            DecodedKey::RawKey(KeyCode::F2) => {
+                self.enregistrer();
+                affichage::dessiner_interface(self);
+            }
+            DecodedKey::RawKey(KeyCode::ArrowUp) => self.deplacer_curseur(0, -1),
+            DecodedKey::RawKey(KeyCode::ArrowDown) => self.deplacer_curseur(0, 1),
+            DecodedKey::RawKey(KeyCode::ArrowLeft) => self.deplacer_curseur(-1, 0),
+            DecodedKey::RawKey(KeyCode::ArrowRight) => self.deplacer_curseur(1, 0),
+            DecodedKey::Unicode('\x08') => {
+                self.supprimer_caractere();
+                affichage::dessiner_interface(self);
+            }
+            DecodedKey::Unicode(c) => {
+                self.inserer_caractere(c);
+                affichage::dessiner_interface(self);
+            }
+            _ => {}
+        }
+        false
     }
 }
 
 // --- [STATIC 1 : EDITEUR] ---
-// Description : Instance globale de l'éditeur de texte.
-pub static EDITEUR: spin::Mutex<Editeur> = spin::Mutex::new(Editeur::new());
+// Description : Instance globale de l'éditeur protégée par Mutex.
+pub static EDITEUR: Mutex<Editeur> = Mutex::new(Editeur::new());

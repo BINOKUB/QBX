@@ -34,15 +34,9 @@ impl Shell {
         }
     }
 
-    // --- [FONCTION 1.2 : introduire_caractere] ---
-    // Description : Traite la saisie des caractères, redirige vers edt si actif, gère Entrée et Backspace.
+   // --- [FONCTION 1.2 : introduire_caractere] ---
+    // Description : Traite la saisie des caractères, gère Entrée et Backspace pour le Shell.
     pub fn introduire_caractere(&mut self, c: char) {
-        // Si l'éditeur plein écran est actif, on lui redirige les touches directement
-        if commandes::edt::EDITEUR.lock().est_actif() {
-            commandes::edt::EDITEUR.lock().inserer_caractere(c);
-            return;
-        }
-
         match c {
             '\n' | '\r' => {
                 println!();
