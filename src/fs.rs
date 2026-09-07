@@ -1,93 +1,78 @@
-// QBX VFS - Révision 0.4
+// QBX VFS - Révision 0.5
 // Fichier : src/fs.rs
-// Description : VFS RamDisk aligné sur les attentes de ls.rs, cat.rs et edt
+// Description : Système de fichiers virtuel dynamique (Heap) sans limite de taille
 
+use alloc::vec::Vec;
+use alloc::string::String;
 use spin::Mutex;
 
 // --- [STRUCTURE 1 : Fichier] ---
+// Description : Représente un fichier avec un nom et un contenu dynamiques.
 pub struct Fichier {
-    pub nom: [u8; 32],
-    pub nom_len: usize,
-    pub contenu: [u8; 1024],
-    pub taille: usize,
-    pub utilise: bool,
+    pub nom: String,
+    pub contenu: Vec<u8>,
 }
 
 // --- [STRUCTURE 2 : RamDisk] ---
+// Description : Conteneur dynamique de fichiers utilisant Vec.
 pub struct RamDisk {
-    pub fichiers: [Fichier; 10],
+    pub fichiers: Vec<Fichier>,
 }
 
 impl RamDisk {
+    // --- [FONCTION 2.1 : new] ---
+    // Description : Initialise un RamDisk vide.
     pub const fn new() -> Self {
-        const FICHIER_VIDE: Fichier = Fichier {
-            nom: [0; 32],
-            nom_len: 0,
-            contenu: [0; 1024],
-            taille: 0,
-            utilise: false,
-        };
         RamDisk {
-            fichiers: [FICHIER_VIDE; 10],
+            fichiers: Vec::new(),
         }
     }
 
-    // Méthode appelée directement par cat.rs : fs_guard.lire(nom_fichier)
-    pub fn lire(&self, nom: &str) -> Option<(&[u8], usize)> {
-        let nom_bytes = nom.as_bytes();
+    // --- [FONCTION 2.2 : lire] ---
+    // Description : Recherche un fichier et renvoie une référence vers son contenu (Slice).
+    pub fn lire(&self, nom: &str) -> Option<&[u8]> {
         for f in self.fichiers.iter() {
-            if f.utilise && &f.nom[..f.nom_len] == nom_bytes {
-                return Some((&f.contenu[..f.taille], f.taille));
+            if f.nom == nom {
+                return Some(&f.contenu);
             }
         }
         None
     }
 }
 
+// --- [STATIC 1 : SYSTEME_FICHIERS] ---
 pub static SYSTEME_FICHIERS: Mutex<RamDisk> = Mutex::new(RamDisk::new());
 pub static FS: &Mutex<RamDisk> = &SYSTEME_FICHIERS;
 
-// --- [FONCTIONS PUBLIQUES] ---
-
+// --- [FONCTION 3 : ecrire] ---
+// Description : Met à jour un fichier existant ou en crée un nouveau dynamiquement.
 pub fn ecrire(nom: &str, contenu: &[u8]) -> bool {
     let mut fs = SYSTEME_FICHIERS.lock();
-    let nom_bytes = nom.as_bytes();
 
     // 1. Mise à jour d'un fichier existant
     for f in fs.fichiers.iter_mut() {
-        if f.utilise && &f.nom[..f.nom_len] == nom_bytes {
-            let len = contenu.len().min(1024);
-            f.contenu[..len].copy_from_slice(&contenu[..len]);
-            f.taille = len;
+        if f.nom == nom {
+            f.contenu = contenu.to_vec();
             return true;
         }
     }
 
     // 2. Création d'un nouveau fichier
-    for f in fs.fichiers.iter_mut() {
-        if !f.utilise {
-            let nlen = nom_bytes.len().min(32);
-            f.nom[..nlen].copy_from_slice(&nom_bytes[..nlen]);
-            f.nom_len = nlen;
+    fs.fichiers.push(Fichier {
+        nom: String::from(nom),
+        contenu: contenu.to_vec(),
+    });
 
-            let clen = contenu.len().min(1024);
-            f.contenu[..clen].copy_from_slice(&contenu[..clen]);
-            f.taille = clen;
-            f.utilise = true;
-            return true;
-        }
-    }
-
-    false
+    true
 }
 
-pub fn lire(nom: &str) -> Option<[u8; 1024]> {
+// --- [FONCTION 4 : lire] ---
+// Description : Renvoie une copie du contenu (pour l'éditeur).
+pub fn lire(nom: &str) -> Option<Vec<u8>> {
     let fs = SYSTEME_FICHIERS.lock();
-    let nom_bytes = nom.as_bytes();
-
     for f in fs.fichiers.iter() {
-        if f.utilise && &f.nom[..f.nom_len] == nom_bytes {
-            return Some(f.contenu);
+        if f.nom == nom {
+            return Some(f.contenu.clone());
         }
     }
     None

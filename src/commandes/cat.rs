@@ -1,6 +1,6 @@
-// QBX Commande - Révision 0.1
+// QBX Commande - Révision 0.2
 // Fichier : src/commandes/cat.rs
-// Description : Affiche le contenu d'un fichier texte enregistré dans le VFS
+// Description : Affiche le contenu d'un fichier texte enregistré dans le VFS dynamique
 
 use crate::{println, fs};
 
@@ -13,11 +13,14 @@ pub fn executer(nom_fichier: &str) {
     }
 
     let fs_guard = fs::SYSTEME_FICHIERS.lock();
-    if let Some((contenu, taille)) = fs_guard.lire(nom_fichier) {
-        for &octet in &contenu[..taille] {
-            if octet != 0 {
-                crate::print!("{}", octet as char);
-            }
+    if let Some(contenu) = fs_guard.lire(nom_fichier) {
+        if contenu.is_empty() {
+            println!("(Fichier vide)");
+            return;
+        }
+        
+        for &octet in contenu {
+            crate::print!("{}", octet as char);
         }
         println!();
     } else {
