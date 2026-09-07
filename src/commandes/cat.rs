@@ -1,4 +1,4 @@
-// QBX Commande - Révision 0.3
+// QBX Commande - Révision 0.4
 // Fichier : src/commandes/cat.rs
 // Description : Affiche le contenu d'un fichier texte du VFS avec support optionnel du pager (-ppp)
 
@@ -32,11 +32,13 @@ pub fn executer(args: &str) {
             return;
         }
         
-        if let Ok(contenu_str) = core::str::from_utf8(contenu) {
+        // Correction : on passe une référence &contenu au validateur UTF-8
+        if let Ok(contenu_str) = core::str::from_utf8(&contenu) {
             if option_ppp {
                 pager::afficher_avec_pagination(contenu_str);
             } else {
-                for &octet in contenu {
+                // Correction : on itère sur la référence (&contenu) pour extraire les octets un par un
+                for &octet in &contenu {
                     crate::print!("{}", octet as char);
                 }
                 println!();

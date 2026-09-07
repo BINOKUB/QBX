@@ -9,7 +9,6 @@ use spin::Mutex;
 use x86_64::instructions::port::Port;
 
 // --- [ENUMERATION 1 : Couleur] ---
-// Description : Palette de 16 couleurs VGA standards.
 #[allow(dead_code)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(u8)]
@@ -33,21 +32,17 @@ pub enum Couleur {
 }
 
 // --- [STRUCTURE 1 : CodeCouleur] ---
-// Description : Combine la couleur de texte et la couleur de fond sur un octet.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(transparent)]
 struct CodeCouleur(u8);
 
 impl CodeCouleur {
-    // --- [FONCTION 1.1 : nouveau] ---
-    // Description : Génère le code couleur combiné.
     fn nouveau(texte: Couleur, fond: Couleur) -> CodeCouleur {
         CodeCouleur((fond as u8) << 4 | (texte as u8))
     }
 }
 
 // --- [STRUCTURE 2 : CaractereEcran] ---
-// Description : Représente une cellule mémoire VGA (caractère + couleur).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 #[repr(C)]
 struct CaractereEcran {
@@ -59,14 +54,12 @@ const HAUTEUR_BUFFER: usize = 25;
 const LARGEUR_BUFFER: usize = 80;
 
 // --- [STRUCTURE 3 : Buffer] ---
-// Description : Représentation mémoire de la grille VGA 80x25.
 #[repr(transparent)]
 struct Buffer {
     caracteres: [[Volatile<CaractereEcran>; LARGEUR_BUFFER]; HAUTEUR_BUFFER],
 }
 
 // --- [STRUCTURE 4 : Ecrivain] ---
-// Description : Gestionnaire de l'état d'affichage VGA (curseur, couleurs et pointeur mémoire).
 pub struct Ecrivain {
     colonne_position: usize,
     code_couleur: CodeCouleur,
@@ -74,8 +67,6 @@ pub struct Ecrivain {
 }
 
 impl Ecrivain {
-    // --- [FONCTION 4.1 : char_vers_cp437] ---
-    // Description : Mappe les caractères UTF-8 français vers la table CP437 du mode texte VGA.
     fn char_vers_cp437(c: char) -> u8 {
         match c {
             'é' => 0x82,
@@ -101,8 +92,6 @@ impl Ecrivain {
         }
     }
 
-    // --- [FONCTION 4.2 : mettre_a_jour_curseur] ---
-    // Description : Synchronise la position du curseur clignotant via les ports I/O 0x3D4 et 0x3D5.
     fn mettre_a_jour_curseur(&self) {
         let position = (HAUTEUR_BUFFER - 1) * LARGEUR_BUFFER + self.colonne_position;
         unsafe {
@@ -117,8 +106,6 @@ impl Ecrivain {
         }
     }
 
-    // --- [FONCTION 4.3 : ecrire_chaine] ---
-    // Description : Écrit une chaîne de caractères dans la mémoire VGA et met à jour le curseur.
     pub fn ecrire_chaine(&mut self, s: &str) {
         for c in s.chars() {
             match c {
@@ -145,8 +132,6 @@ impl Ecrivain {
         self.mettre_a_jour_curseur();
     }
 
-    // --- [FONCTION 4.4 : effacer_dernier_caractere] ---
-    // Description : Recule d'une colonne et remplace le caractère par un espace (Backspace).
     pub fn effacer_dernier_caractere(&mut self) {
         if self.colonne_position > 0 {
             self.colonne_position -= 1;
@@ -161,8 +146,6 @@ impl Ecrivain {
         }
     }
 
-    // --- [FONCTION 4.5 : nettoyer_ecran] ---
-    // Description : Remplit toute la grille VGA d'espaces et replace le curseur au début.
     pub fn nettoyer_ecran(&mut self) {
         let vide = CaractereEcran {
             caractere_ascii: b' ',
@@ -177,8 +160,6 @@ impl Ecrivain {
         self.mettre_a_jour_curseur();
     }
 
-    // --- [FONCTION 4.6 : nouvelle_ligne] ---
-    // Description : Fait défiler tout le contenu d'une ligne vers le haut (scrolling).
     fn nouvelle_ligne(&mut self) {
         for ligne in 1..HAUTEUR_BUFFER {
             for colonne in 0..LARGEUR_BUFFER {
@@ -190,8 +171,6 @@ impl Ecrivain {
         self.colonne_position = 0;
     }
 
-    // --- [FONCTION 4.7 : vider_ligne] ---
-    // Description : Efface une ligne spécifique en la remplissant d'espaces.
     fn vider_ligne(&mut self, ligne: usize) {
         let vide = CaractereEcran {
             caractere_ascii: b' ',
@@ -203,7 +182,6 @@ impl Ecrivain {
     }
 }
 
-// --- [IMPLÉMENTATION 1 : fmt::Write pour Ecrivain] ---
 impl fmt::Write for Ecrivain {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         self.ecrire_chaine(s);
@@ -211,8 +189,6 @@ impl fmt::Write for Ecrivain {
     }
 }
 
-// --- [STATIC 1 : ECRIVAIN] ---
-// Mutex global pointant sur l'adresse mémoire VGA 0xB8000.
 lazy_static! {
     pub static ref ECRIVAIN: Mutex<Ecrivain> = Mutex::new(Ecrivain {
         colonne_position: 0,
@@ -221,8 +197,6 @@ lazy_static! {
     });
 }
 
-// --- [FONCTION GLOBALE 1 : clear_screen] ---
-// Description : Interface d'accès rapide pour vider l'écran depuis d'autres modules.
 pub fn clear_screen() {
     ECRIVAIN.lock().nettoyer_ecran();
 }
@@ -230,16 +204,21 @@ pub fn clear_screen() {
 // --- [MACROS : print et println] ---
 #[macro_export]
 macro_rules! print {
-    ($($arg:tt)*) => ($crate::vga_buffer::_print(format_args!($($arg)*)));
+    ($($arg:tt)*) => {
+        $crate::vga_buffer::_print(format_args!($($arg)*))
+    };
 }
 
 #[macro_export]
 macro_rules! println {
-    () => ($crate::print!("\n"));
-    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
+    () => {
+        $crate::print!("\n")
+    };
+    ($($arg:tt)*) => {
+        $crate::print!("{}\n", format_args!($($arg)*))
+    };
 }
 
-// --- [FONCTION INTERNE 1 : _print] ---
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;

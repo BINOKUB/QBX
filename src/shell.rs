@@ -43,7 +43,8 @@ impl Shell {
                 self.enregistrer_dans_historique();
                 self.executer_commande();
                 self.reinitialiser();
-                print!("qbx> ");
+                let chemin = crate::fs::chemin_actuel();
+                print!("qbx:{}> ", chemin);
             }
             '\x08' | '\x7f' => {
                 if self.cursor > 0 {
@@ -181,6 +182,14 @@ impl Shell {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 commandes::cat::executer(reste_args);
             }
+            "ctr" => {
+            let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+            commandes::ctr::executer(reste_args);
+        }
+            "cdr" => {
+    let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+    commandes::cdr::executer(reste_args);
+        }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");

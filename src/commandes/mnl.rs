@@ -133,6 +133,26 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("     coupure d'alimentation sur les ports ACPI/APM.\n");
             println!("QBX v0.1.0                      Révision 0.1                      QTR(1)");
         }
+        "ctr" => {
+            println!("CTR(1)                      Manuel de référence QBX                      CTR(1)");
+            println!("NOM");
+            println!("     ctr - Créer un répertoire");
+            println!("SYNOPSIS");
+            println!("     ctr <nom_repertoire>");
+            println!("DESCRIPTION");
+            println!("     Crée un nouveau répertoire vide dans le système de fichiers VFS.");
+            println!("QBX v0.1.0                      Révision 0.1                      CTR(1)");
+        }
+            "cdr" => {
+    println!("CDR(1)                      Manuel de référence QBX                      CDR(1)");
+    println!("NOM");
+    println!("     cdr - Changer de répertoire courant");
+    println!("SYNOPSIS");
+    println!("     cdr <chemin>");
+    println!("DESCRIPTION");
+    println!("     Permet de naviguer dans l'arborescence des dossiers du VFS.");
+    println!("QBX v0.1.0                      Révision 0.1                      CDR(1)");
+}
         inconnu => {
             println!("Aucune page de manuel pour : {}", inconnu);
             println!("Tapez 'mnl' sans argument pour voir la liste des commandes.");

@@ -13,7 +13,7 @@ mod interrupts;
 mod shell;
 mod power;
 mod commandes;
-mod clavier_queue; // --- NOUVEAU MODULE ---
+mod clavier_queue;
 pub mod fs;
 pub mod allocator;
 pub mod memory;
@@ -80,7 +80,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     println!("Heap 100 KiB : OK");
     println!("Système prêt.\n");
-    print!("qbx> ");
+    print!("qbx:{}> ", fs::chemin_actuel()); // <-- Le prompt corrigé est bien placé ici
 
     // --- CORRECTION : Resynchronisation du clavier avant la boucle ---
     synchroniser_caps_lock();
