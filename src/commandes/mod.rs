@@ -9,3 +9,4 @@ pub mod tmps;
 pub mod edt;
 pub mod ls;
 pub mod cat;
+pub mod pager;

@@ -1,8 +1,9 @@
-// QBX Commande - Révision 0.6
+// QBX Commande - Révision 0.7
 // Fichier : src/commandes/mnl.rs
-// Description : Manuel du système QBX (Pages 'man' compactes adaptées au format VGA 80x25)
+// Description : Manuel du système QBX avec support du pager modulaire pour les pages longues
 
 use crate::println;
+use crate::commandes::pager;
 
 // --- [FONCTION 1 : executer] ---
 // Description : Affiche la documentation d'une commande passée en argument au format classique.
@@ -50,20 +51,41 @@ pub fn executer(commande: &str) {
             println!("QBX v0.1.0                      Révision 0.1                     TMPS(1)");
         }
         "edt" => {
-            println!("EDT(1)                      Manuel de référence QBX                      EDT(1)");
-            println!("NOM");
-            println!("     edt - Éditeur de texte plein écran (80x23)");
-            println!("SYNOPSIS");
-            println!("     edt [-l] [fichier]");
-            println!("DESCRIPTION");
-            println!("     Éditeur RAMDisk. Sans nom au démarrage (tampon anonyme volatile).");
-            println!("     Modifications en mémoire, sauvegarde explicite.");
-            println!("OPTIONS & TOUCHES DE CONTRÔLE");
-            println!("     -l    : Affiche les numéros de ligne dynamiques.");
-            println!("     [F2]  : Sauvegarder dans le VFS       [F5] : Coller le presse-papier");
-            println!("     [F3]  : Copier bloc ou ligne courante [F6] : Ancrer/désancrer un bloc");
-            println!("     [F4]  : Couper bloc ou ligne courante [ESC]: Quitter l'éditeur");
-            println!("QBX v0.1.0                      Révision 0.2                      EDT(1)");
+            let texte_manuel = "EDT(1)                      Manuel de référence QBX                      EDT(1)\n\
+\n\
+NOM\n\
+     edt - Éditeur de texte plein écran\n\
+\n\
+SYNOPSIS\n\
+     edt [-l] [fichier]\n\
+\n\
+DESCRIPTION\n\
+     Edt est un éditeur de texte orienté mémoire (RAMDisk) conçu pour QBX.\n\
+     Il est utilisé pour créer, afficher, modifier et manipuler des fichiers\n\
+     textuels en mode plein écran (80x23).\n\
+\n\
+     Si aucun fichier n'est spécifié au démarrage, l'éditeur s'ouvre sur\n\
+     un espace de travail vierge et anonyme ([Sans nom]) sans impacter le disque.\n\
+     Les modifications s'effectuent dans un tampon dynamique et ne sont enregistrées\n\
+     qu'à la demande explicite de l'utilisateur.\n\
+\n\
+OPTIONS\n\
+     Les options suivantes sont disponibles :\n\
+\n\
+     -l      Affiche les numéros de ligne dynamiques le long de la marge.\n\
+     fichier Spécifie le nom d'un fichier à charger depuis le système VFS.\n\
+\n\
+TOUCHES DE CONTRÔLE\n\
+     [F2]    Sauvegarde le tampon courant dans le système de fichiers.\n\
+     [F3]    Copie le bloc sélectionné (ou la ligne courante) dans le presse-papier.\n\
+     [F4]    Coupe le bloc sélectionné (ou la ligne courante) vers le presse-papier.\n\
+     [F5]    Colle le contenu du presse-papier à la position actuelle du curseur.\n\
+     [F6]    Pose ou efface un point d'ancrage pour délimiter un bloc de texte.\n\
+     [ESC]   Quitte l'éditeur de texte.\n\
+\n\
+QBX v0.1.0                      Révision 0.2                      EDT(1)";
+
+            pager::afficher_avec_pagination(texte_manuel);
         }
         "ls" => {
             println!("LS(1)                       Manuel de référence QBX                       LS(1)\n");

@@ -177,7 +177,9 @@ impl Shell {
                 commandes::ls::executer();
             }
             "cat" => {
-                commandes::cat::executer(argument);
+                // Transmet l'ensemble de la ligne d'arguments après 'cat' (fichier + options)
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::cat::executer(reste_args);
             }
             "aide" => {
                 println!("Lexique des commandes QBX :");
