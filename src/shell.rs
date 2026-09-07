@@ -192,6 +192,10 @@ impl Shell {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 commandes::spp::executer(reste_args);
             }
+            "rnm" => {
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::rnm::executer(reste_args);
+            }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");
@@ -205,6 +209,7 @@ impl Shell {
                 println!("  spp  : Supprimer un fichier ou répertoire (ex: spp test.txt, spp -r monrep)");
                 println!("  mnl  : Manuel système (ex: mnl edt)");
                 println!("  qtr  : Quitter le système");
+                println!("  rnm  : Renommer (ex: rnm f1.txt f2.txt, rnm -r rep1 rep2)");
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);

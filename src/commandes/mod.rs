@@ -13,3 +13,4 @@ pub mod pager;
 pub mod ctr;
 pub mod cdr;
 pub mod spp;
+pub mod rnm;

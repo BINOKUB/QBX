@@ -1,6 +1,6 @@
 // QBX FileSystem Module - Révision 0.4
 // Fichier : src/fs/mod.rs
-// Description : Façade centrale du système de fichiers hiérarchique avec support dynamique du CWD et suppression stricte
+// Description : Façade centrale du système de fichiers hiérarchique avec support dynamique du CWD, suppression et renommage stricts[cite: 5]
 
 pub mod node;
 pub mod path;
@@ -156,7 +156,7 @@ impl FileSystem {
                 s.push('/');
                 s.push_str(dossier);
             }
-            s // <-- La variable s renvoyée ici
+            s
         }
     }
 
@@ -186,6 +186,40 @@ impl FileSystem {
         }
         Err("erreur_fs")
     }
+
+    // --- [FONCTION 1.11 : renommer] ---
+    // Description : Renomme un fichier ou un dossier dans le répertoire courant selon le type attendu.
+    pub fn renommer(&mut self, ancien: &str, nouveau: &str, dossier_attendu: bool) -> Result<(), &'static str> {
+        let cwd_clone = self.cwd.clone();
+        if let Some(Node::Directory { children }) = self.acceder_noeud_mut(&cwd_clone) {
+            if children.contains_key(nouveau) {
+                return Err("existe_deja");
+            }
+
+            if let Some(noeud) = children.get(ancien) {
+                match noeud {
+                    Node::Directory { .. } => {
+                        if !dossier_attendu {
+                            return Err("est_dossier");
+                        }
+                    }
+                    Node::File { .. } => {
+                        if dossier_attendu {
+                            return Err("est_fichier");
+                        }
+                    }
+                }
+            } else {
+                return Err("introuvable");
+            }
+
+            if let Some(noeud) = children.remove(ancien) {
+                children.insert(String::from(nouveau), noeud);
+                return Ok(());
+            }
+        }
+        Err("erreur_fs")
+    }
 }
 
 // --- [STATIC 1 : SYSTEME_FICHIERS] ---
@@ -210,4 +244,8 @@ pub fn chemin_actuel() -> String {
 
 pub fn supprimer(nom: &str, dossier_attendu: bool) -> Result<(), &'static str> {
     SYSTEME_FICHIERS.lock().supprimer(nom, dossier_attendu)
+}
+
+pub fn renommer(ancien: &str, nouveau: &str, dossier_attendu: bool) -> Result<(), &'static str> {
+    SYSTEME_FICHIERS.lock().renommer(ancien, nouveau, dossier_attendu)
 }

@@ -98,6 +98,25 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("     fichiers VFS (RAMDisk). Affiche le nom et la taille en octets.\n");
             println!("QBX v0.1.0                      Révision 0.1                      LS(1)");
         }
+            "rnm" => {
+            println!("--- MANUEL : rnm (Renommer) ---");
+            println!("USAGE :");
+            println!("  rnm <ancien_fichier> <nouveau_fichier>");
+            println!("  rnm -r <ancien_rep> <nouveau_rep>");
+            println!("DESCRIPTION :");
+            println!("  Renomme un fichier ou un répertoire dans le dossier courant.");
+            println!("  L'option '-r' est strictement requise pour les répertoires");
+            println!("  et interdite pour les fichiers.");
+        }
+            "spp" => {
+            println!("--- MANUEL : spp (Supprimer) ---");
+            println!("USAGE :");
+            println!("  spp <nom_fichier>");
+            println!("  spp -r <nom_repertoire>");
+            println!("DESCRIPTION :");
+            println!("  Supprime définitivement un fichier ou un dossier du RAMDisk.");
+            println!("  L'option '-r' est obligatoire pour détruire un répertoire.");
+        }
         "cat" => {
             println!("CAT(1)                      Manuel de référence QBX                      CAT(1)");
             println!("NOM");
