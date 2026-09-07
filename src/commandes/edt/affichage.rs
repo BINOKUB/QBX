@@ -50,7 +50,7 @@ pub fn dessiner_barre_statut(nom_fichier: &str) {
 }
 
 // --- [FONCTION 4 : dessiner_interface] ---
-// Description : Efface l'écran, dessine l'interface et restitue le texte en liant le curseur visuel à curseur_pos.
+// Description : Efface l'écran, dessine l'interface et restitue le texte avec gestion du curseur, de l'option -l et de la sélection visuelle (F6).
 pub fn dessiner_interface(editeur: &Editeur) {
     effacer_ecran_complet();
 
@@ -59,11 +59,40 @@ pub fn dessiner_interface(editeur: &Editeur) {
 
     let mut x = 0;
     let mut y = 0;
+    let mut ligne_courante = 1;
+
+    // Calcul des bornes de la sélection si F6 est actif
+    let (sel_min, sel_max) = if let Some(debut) = editeur.selection_debut {
+        (debut.min(editeur.curseur_pos), debut.max(editeur.curseur_pos))
+    } else {
+        (0, 0)
+    };
+    let en_selection = editeur.selection_debut.is_some();
+
+    // Si l'option -l est activée, affichage du premier numéro de ligne
+    if editeur.option_l && y < HAUTEUR_EDIT {
+        let prefixe = b"1  ";
+        for &b in prefixe {
+            ecrire_vga(x, y, b, 0x08);
+            x += 1;
+        }
+    }
     
     for (i, &byte) in editeur.tampon.iter().enumerate() {
-        // Applique un fond gris (0x70) si l'index correspond à la position du curseur
         let est_curseur = i == editeur.curseur_pos;
-        let couleur = if est_curseur { 0x70 } else { 0x07 };
+        let dans_bloc = en_selection && i >= sel_min && i < sel_max;
+
+        // Détermination des couleurs VGA :
+        // 0x70 = Curseur (Fond gris, texte noir)
+        // 0x17 = Sélection de bloc (Fond bleu, texte gris clair)
+        // 0x07 = Normal
+        let couleur = if est_curseur {
+            0x70
+        } else if dans_bloc {
+            0x17
+        } else {
+            0x07
+        };
         
         if byte == b'\n' {
             if est_curseur {
@@ -71,6 +100,22 @@ pub fn dessiner_interface(editeur: &Editeur) {
             }
             x = 0;
             y += 1;
+            ligne_courante += 1;
+
+            if editeur.option_l && y < HAUTEUR_EDIT {
+                let num_str = if ligne_courante < 10 {
+                    alloc::format!("{}  ", ligne_courante)
+                } else if ligne_courante < 100 {
+                    alloc::format!("{} ", ligne_courante)
+                } else {
+                    alloc::format!("{}", ligne_courante)
+                };
+
+                for &b in num_str.as_bytes() {
+                    ecrire_vga(x, y, b, 0x08);
+                    x += 1;
+                }
+            }
         } else {
             ecrire_vga(x, y, byte, couleur);
             x += 1;
@@ -85,7 +130,6 @@ pub fn dessiner_interface(editeur: &Editeur) {
         }
     }
     
-    // Si le curseur est placé à la toute fin du fichier (après le dernier caractère)
     if editeur.curseur_pos >= editeur.tampon.len() && y < HAUTEUR_EDIT {
         ecrire_vga(x, y, b'_', 0x0f);
     }
