@@ -99,15 +99,17 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("QBX v0.1.0                      Révision 0.1                      LS(1)");
         }
         "cat" => {
-            println!("CAT(1)                      Manuel de référence QBX                      CAT(1)\n");
+            println!("CAT(1)                      Manuel de référence QBX                      CAT(1)");
             println!("NOM");
-            println!("     cat - Afficher le contenu d'un fichier\n");
+            println!("     cat - Afficher le contenu d'un fichier");
             println!("SYNOPSIS");
-            println!("     cat <nom_fichier>\n");
+            println!("     cat <nom_fichier> [-ppp]");
             println!("DESCRIPTION");
             println!("     Recherche un fichier texte dans la mémoire virtuelle (VFS)");
-            println!("     et imprime son contenu brut sur la sortie standard.\n");
-            println!("QBX v0.1.0                      Révision 0.1                      CAT(1)");
+            println!("     et imprime son contenu brut sur la sortie standard.");
+            println!("OPTIONS");
+            println!("     -ppp    Active la pagination page par page pour les fichiers longs.");
+            println!("QBX v0.1.0                      Révision 0.2                      CAT(1)");
         }
         "mnl" => {
             println!("MNL(1)                      Manuel de référence QBX                      MNL(1)\n");
