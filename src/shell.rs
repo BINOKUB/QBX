@@ -34,7 +34,7 @@ impl Shell {
         }
     }
 
-   // --- [FONCTION 1.2 : introduire_caractere] ---
+    // --- [FONCTION 1.2 : introduire_caractere] ---
     // Description : Traite la saisie des caractères, gère Entrée et Backspace pour le Shell.
     pub fn introduire_caractere(&mut self, c: char) {
         match c {
@@ -170,7 +170,6 @@ impl Shell {
                 commandes::tmps::executer();
             }
             "edt" => {
-                // Transmet le reste de la ligne saisie après 'edt'
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 commandes::edt::executer(reste_args);
             }
@@ -178,18 +177,21 @@ impl Shell {
                 commandes::ls::executer();
             }
             "cat" => {
-                // Transmet l'ensemble de la ligne d'arguments après 'cat' (fichier + options)
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 commandes::cat::executer(reste_args);
             }
             "ctr" => {
-            let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
-            commandes::ctr::executer(reste_args);
-        }
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::ctr::executer(reste_args);
+            }
             "cdr" => {
-    let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
-    commandes::cdr::executer(reste_args);
-        }
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::cdr::executer(reste_args);
+            }
+            "spp" => {
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::spp::executer(reste_args);
+            }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");
@@ -198,6 +200,9 @@ impl Shell {
                 println!("  edt  : Éditeur de texte (ex: edt -l test.txt)");
                 println!("  ls   : Lister les fichiers en mémoire");
                 println!("  cat  : Afficher le contenu d'un fichier");
+                println!("  ctr  : Créer un répertoire (ex: ctr monrep)");
+                println!("  cdr  : Changer de répertoire (ex: cdr monrep, cdr ..)");
+                println!("  spp  : Supprimer un fichier ou répertoire (ex: spp test.txt, spp -r monrep)");
                 println!("  mnl  : Manuel système (ex: mnl edt)");
                 println!("  qtr  : Quitter le système");
             }

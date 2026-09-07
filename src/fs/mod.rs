@@ -1,6 +1,6 @@
-// QBX FileSystem Module - Révision 0.3
+// QBX FileSystem Module - Révision 0.4
 // Fichier : src/fs/mod.rs
-// Description : Façade centrale du système de fichiers hiérarchique avec support dynamique du CWD[cite: 9]
+// Description : Façade centrale du système de fichiers hiérarchique avec support dynamique du CWD et suppression stricte
 
 pub mod node;
 pub mod path;
@@ -156,8 +156,35 @@ impl FileSystem {
                 s.push('/');
                 s.push_str(dossier);
             }
-            s
+            s // <-- La variable s renvoyée ici
         }
+    }
+
+    // --- [FONCTION 1.10 : supprimer] ---
+    // Description : Supprime un fichier ou un dossier selon le type explicitement attendu.
+    pub fn supprimer(&mut self, nom: &str, dossier_attendu: bool) -> Result<(), &'static str> {
+        let cwd_clone = self.cwd.clone();
+        if let Some(Node::Directory { children }) = self.acceder_noeud_mut(&cwd_clone) {
+            if let Some(noeud) = children.get(nom) {
+                match noeud {
+                    Node::Directory { .. } => {
+                        if !dossier_attendu {
+                            return Err("est_dossier");
+                        }
+                    }
+                    Node::File { .. } => {
+                        if dossier_attendu {
+                            return Err("est_fichier");
+                        }
+                    }
+                }
+                children.remove(nom);
+                return Ok(());
+            } else {
+                return Err("introuvable");
+            }
+        }
+        Err("erreur_fs")
     }
 }
 
@@ -179,4 +206,8 @@ pub fn lister() -> Vec<(String, usize)> {
 
 pub fn chemin_actuel() -> String {
     SYSTEME_FICHIERS.lock().obtenir_chemin_actuel()
+}
+
+pub fn supprimer(nom: &str, dossier_attendu: bool) -> Result<(), &'static str> {
+    SYSTEME_FICHIERS.lock().supprimer(nom, dossier_attendu)
 }
