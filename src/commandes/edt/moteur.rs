@@ -1,6 +1,6 @@
-// QBX EDT Engine - Révision 1.5
+// QBX EDT Engine - Révision 1.7
 // Fichier : src/commandes/edt/moteur.rs
-// Description : Moteur avec navigation 2D, presse-papier, touche DEL et sélection de blocs par ancrage (F6)
+// Description : Moteur avec buffer anonyme au démarrage, sauvegarde à la volée, navigation 2D et sélection F6.
 
 use alloc::vec::Vec;
 use spin::Mutex;
@@ -49,7 +49,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 3 : lancer] ---
-    // Description : Initialise l'éditeur, charge le fichier et réinitialise l'ancrage.
+    // Description : Initialise l'éditeur. Si aucun nom n'est fourni, ouvre un espace vierge anonyme sans créer de fichier sur le disque.
     pub fn lancer(&mut self, option_l: bool, nom_fichier: &str) {
         self.option_l = option_l;
         self.curseur_pos = 0;
@@ -57,20 +57,29 @@ impl Editeur {
         self.actif = true;
         self.selection_debut = None;
 
-        let nom_final = if nom_fichier.trim().is_empty() { "sans_titre.txt" } else { nom_fichier };
-        let bytes = nom_final.as_bytes();
-        self.taille_nom = bytes.len().min(32);
-        self.nom_fichier[..self.taille_nom].copy_from_slice(&bytes[..self.taille_nom]);
-
-        if let Some(contenu) = fs::lire(nom_final) {
-            self.tampon = contenu.to_vec();
-            self.taille_texte = self.tampon.len();
-            self.curseur_pos = self.taille_texte;
-        } else {
+        let nom_trim = nom_fichier.trim();
+        if nom_trim.is_empty() {
+            // Espace vierge et volatile (aucun fichier par défaut créé sur le disque)
+            self.taille_nom = 0;
+            self.nom_fichier = [0; 32];
             self.tampon = Vec::new();
             self.taille_texte = 0;
+        } else {
+            let bytes = nom_trim.as_bytes();
+            self.taille_nom = bytes.len().min(32);
+            self.nom_fichier[..self.taille_nom].copy_from_slice(&bytes[..self.taille_nom]);
+
+            if let Some(contenu) = fs::lire(nom_trim) {
+                self.tampon = contenu.to_vec();
+                self.taille_texte = self.tampon.len();
+                self.curseur_pos = self.taille_texte;
+            } else {
+                self.tampon = Vec::new();
+                self.taille_texte = 0;
+            }
         }
 
+        self.ajuster_defilement();
         affichage::dessiner_interface(self);
     }
 
@@ -84,13 +93,20 @@ impl Editeur {
 
     // --- [FONCTION 5 : sauvegarder] ---
     // Description : Alias pour enregistrer le fichier.
-    pub fn sauvegarder(&self) {
+    pub fn sauvegarder(&mut self) {
         self.enregistrer();
     }
 
     // --- [FONCTION 6 : enregistrer] ---
-    // Description : Écrit le contenu du tampon dynamique dans le système de fichiers (VFS).
-    pub fn enregistrer(&self) {
+    // Description : Écrit le contenu dans le VFS. Assigne un nom par défaut si le buffer était anonyme.
+    pub fn enregistrer(&mut self) {
+        if self.taille_nom == 0 {
+            let defaut = "sans_titre.txt";
+            let bytes = defaut.as_bytes();
+            self.taille_nom = bytes.len().min(32);
+            self.nom_fichier[..self.taille_nom].copy_from_slice(&bytes[..self.taille_nom]);
+        }
+
         if self.taille_nom > 0 {
             if let Ok(nom) = core::str::from_utf8(&self.nom_fichier[..self.taille_nom]) {
                 fs::ecrire(nom, &self.tampon);
@@ -180,6 +196,7 @@ impl Editeur {
                 }
             }
         }
+        self.ajuster_defilement();
         affichage::dessiner_interface(self);
     }
 
@@ -245,6 +262,7 @@ impl Editeur {
             self.taille_texte = self.tampon.len();
             self.curseur_pos = min;
             self.selection_debut = None;
+            self.ajuster_defilement();
             affichage::dessiner_interface(self);
         } else {
             self.copier_selection_ou_ligne();
@@ -254,6 +272,7 @@ impl Editeur {
             self.tampon.drain(debut..fin_coupe);
             self.taille_texte = self.tampon.len();
             self.curseur_pos = debut.min(self.taille_texte);
+            self.ajuster_defilement();
             affichage::dessiner_interface(self);
         }
     }
@@ -270,6 +289,7 @@ impl Editeur {
         }
         self.taille_texte = self.tampon.len();
         self.curseur_pos = i;
+        self.ajuster_defilement();
         affichage::dessiner_interface(self);
     }
 
@@ -279,12 +299,32 @@ impl Editeur {
         if self.curseur_pos < self.taille_texte {
             self.tampon.remove(self.curseur_pos);
             self.taille_texte -= 1;
+            self.ajuster_defilement();
             affichage::dessiner_interface(self);
         }
     }
 
-    // --- [FONCTION 16 : traiter_touche] ---
-    // Description : Analyse les touches reçues, intégrant la navigation, l'édition, le presse-papier et la sélection F6.
+    // --- [FONCTION 16 : ajuster_defilement] ---
+    // Description : Recale automatiquement la ligne de départ visible pour suivre le curseur.
+    pub fn ajuster_defilement(&mut self) {
+        let mut ligne_curseur = 0;
+        let limit = self.curseur_pos.min(self.tampon.len());
+        for i in 0..limit {
+            if self.tampon[i] == b'\n' {
+                ligne_curseur += 1;
+            }
+        }
+
+        let hauteur_max = affichage::HAUTEUR_EDIT;
+        if ligne_curseur < self.ligne_debut {
+            self.ligne_debut = ligne_curseur;
+        } else if ligne_curseur >= self.ligne_debut + hauteur_max {
+            self.ligne_debut = ligne_curseur - hauteur_max + 1;
+        }
+    }
+
+   // --- [FONCTION 17 : traiter_touche] ---
+    // Description : Analyse les touches reçues, intégrant navigation, édition, défilement et sélection F6.
     pub fn traiter_touche(&mut self, key: DecodedKey) -> bool {
         match key {
             DecodedKey::RawKey(KeyCode::Escape) | DecodedKey::Unicode('\x1b') => {
@@ -316,17 +356,21 @@ impl Editeur {
             DecodedKey::RawKey(KeyCode::ArrowRight) => self.deplacer_curseur(1, 0),
             DecodedKey::Unicode('\x08') => {
                 self.supprimer_caractere();
+                self.ajuster_defilement();
                 affichage::dessiner_interface(self);
             }
             DecodedKey::Unicode(c) => {
                 self.inserer_caractere(c);
+                self.ajuster_defilement();
                 affichage::dessiner_interface(self);
             }
             _ => {}
         }
+        self.ajuster_defilement();
         false
     }
 }
+
 
 // --- [STATIC 1 : EDITEUR] ---
 pub static EDITEUR: Mutex<Editeur> = Mutex::new(Editeur::new());

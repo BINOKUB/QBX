@@ -1,6 +1,6 @@
-// QBX EDT Affichage - Révision 0.8
+// QBX EDT Affichage - Révision 0.9
 // Fichier : src/commandes/edt/affichage.rs
-// Description : Rendu direct en mémoire VGA (0xb8000) intégré avec Vec<u8>
+// Description : Rendu direct en mémoire VGA (0xb8000) intégré avec Vec<u8> et gestion des fichiers anonymes
 
 use crate::commandes::edt::moteur::Editeur;
 
@@ -50,18 +50,55 @@ pub fn dessiner_barre_statut(nom_fichier: &str) {
 }
 
 // --- [FONCTION 4 : dessiner_interface] ---
-// Description : Efface l'écran, dessine l'interface et restitue le texte avec gestion du curseur, de l'option -l et de la sélection visuelle (F6).
+// Description : Efface l'écran, gère le défilement vertical, l'affichage [Sans nom] et restitue le texte visible.
 pub fn dessiner_interface(editeur: &Editeur) {
     effacer_ecran_complet();
 
-    let nom = core::str::from_utf8(&editeur.nom_fichier[..editeur.taille_nom]).unwrap_or("inconnu");
+    // Si aucun nom n'est défini (buffer anonyme), on affiche [Sans nom] dans la barre de statut
+    let nom = if editeur.taille_nom > 0 {
+        core::str::from_utf8(&editeur.nom_fichier[..editeur.taille_nom]).unwrap_or("inconnu")
+    } else {
+        "[Sans nom]"
+    };
+    
     dessiner_barre_statut(nom);
 
-    let mut x = 0;
-    let mut y = 0;
-    let mut ligne_courante = 1;
+    // 1. Trouver l'index du tampon où commence la première ligne visible (ligne_debut)
+    let mut byte_debut_affichage = 0;
+    let mut lignes_compteur = 0;
+    
+    if editeur.ligne_debut > 0 {
+        for (i, &b) in editeur.tampon.iter().enumerate() {
+            if lignes_compteur == editeur.ligne_debut {
+                byte_debut_affichage = i;
+                break;
+            }
+            if b == b'\n' {
+                lignes_compteur += 1;
+            }
+            byte_debut_affichage = i + 1;
+        }
+    }
 
-    // Calcul des bornes de la sélection si F6 est actif
+    let mut screen_x = 0;
+    let mut screen_y = 0;
+    let mut abs_line_num = editeur.ligne_debut;
+
+    // Affichage du premier numéro de ligne si l'option -l est active
+    if editeur.option_l && screen_y < HAUTEUR_EDIT {
+        let num_str = if abs_line_num + 1 < 10 {
+            alloc::format!("{}  ", abs_line_num + 1)
+        } else if abs_line_num + 1 < 100 {
+            alloc::format!("{} ", abs_line_num + 1)
+        } else {
+            alloc::format!("{}", abs_line_num + 1)
+        };
+        for &b in num_str.as_bytes() {
+            ecrire_vga(screen_x, screen_y, b, 0x08);
+            screen_x += 1;
+        }
+    }
+
     let (sel_min, sel_max) = if let Some(debut) = editeur.selection_debut {
         (debut.min(editeur.curseur_pos), debut.max(editeur.curseur_pos))
     } else {
@@ -69,23 +106,11 @@ pub fn dessiner_interface(editeur: &Editeur) {
     };
     let en_selection = editeur.selection_debut.is_some();
 
-    // Si l'option -l est activée, affichage du premier numéro de ligne
-    if editeur.option_l && y < HAUTEUR_EDIT {
-        let prefixe = b"1  ";
-        for &b in prefixe {
-            ecrire_vga(x, y, b, 0x08);
-            x += 1;
-        }
-    }
-    
-    for (i, &byte) in editeur.tampon.iter().enumerate() {
+    // 2. Parcourir le tampon à partir du début de la zone visible
+    for (i, &byte) in editeur.tampon.iter().enumerate().skip(byte_debut_affichage) {
         let est_curseur = i == editeur.curseur_pos;
         let dans_bloc = en_selection && i >= sel_min && i < sel_max;
-
-        // Détermination des couleurs VGA :
-        // 0x70 = Curseur (Fond gris, texte noir)
-        // 0x17 = Sélection de bloc (Fond bleu, texte gris clair)
-        // 0x07 = Normal
+        
         let couleur = if est_curseur {
             0x70
         } else if dans_bloc {
@@ -93,44 +118,48 @@ pub fn dessiner_interface(editeur: &Editeur) {
         } else {
             0x07
         };
-        
+
         if byte == b'\n' {
             if est_curseur {
-                ecrire_vga(x, y, b' ', 0x70);
+                ecrire_vga(screen_x, screen_y, b' ', 0x70);
             }
-            x = 0;
-            y += 1;
-            ligne_courante += 1;
+            screen_x = 0;
+            screen_y += 1;
+            abs_line_num += 1;
 
-            if editeur.option_l && y < HAUTEUR_EDIT {
-                let num_str = if ligne_courante < 10 {
-                    alloc::format!("{}  ", ligne_courante)
-                } else if ligne_courante < 100 {
-                    alloc::format!("{} ", ligne_courante)
+            if screen_y >= HAUTEUR_EDIT {
+                break;
+            }
+
+            if editeur.option_l {
+                let num_str = if abs_line_num + 1 < 10 {
+                    alloc::format!("{}  ", abs_line_num + 1)
+                } else if abs_line_num + 1 < 100 {
+                    alloc::format!("{} ", abs_line_num + 1)
                 } else {
-                    alloc::format!("{}", ligne_courante)
+                    alloc::format!("{}", abs_line_num + 1)
                 };
-
                 for &b in num_str.as_bytes() {
-                    ecrire_vga(x, y, b, 0x08);
-                    x += 1;
+                    ecrire_vga(screen_x, screen_y, b, 0x08);
+                    screen_x += 1;
                 }
             }
         } else {
-            ecrire_vga(x, y, byte, couleur);
-            x += 1;
-            if x >= LARGEUR {
-                x = 0;
-                y += 1;
+            ecrire_vga(screen_x, screen_y, byte, couleur);
+            screen_x += 1;
+            if screen_x >= LARGEUR {
+                screen_x = 0;
+                screen_y += 1;
             }
         }
-        
-        if y >= HAUTEUR_EDIT {
+
+        if screen_y >= HAUTEUR_EDIT {
             break;
         }
     }
-    
-    if editeur.curseur_pos >= editeur.tampon.len() && y < HAUTEUR_EDIT {
-        ecrire_vga(x, y, b'_', 0x0f);
+
+    // Si le curseur est placé à la toute fin du fichier
+    if editeur.curseur_pos >= editeur.tampon.len() && screen_y < HAUTEUR_EDIT {
+        ecrire_vga(screen_x, screen_y, b'_', 0x0f);
     }
 }

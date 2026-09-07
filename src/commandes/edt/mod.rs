@@ -1,4 +1,4 @@
-// QBX EDT Module - Révision 0.6
+// QBX EDT Module - Révision 0.7
 // Fichier : src/commandes/edt/mod.rs
 // Description : Exportation des sous-modules et analyse des arguments de la commande 'edt'
 
@@ -22,9 +22,7 @@ pub fn executer(args: &str) {
         }
     }
 
-    if nom_fichier.is_empty() {
-        nom_fichier = "nouveau.txt";
-    }
-
+    // Si aucun nom de fichier n'est fourni, on passe une chaîne vide 
+    // pour ouvrir un buffer anonyme et volatile (pas de création de fichier fantôme)[cite: 6].
     EDITEUR.lock().lancer(option_l, nom_fichier);
 }

@@ -10,9 +10,9 @@ use x86_64::{
     VirtAddr,
 };
 
-// Plage mémoire virtuelle dédiée au Heap (ex: 100 Ko pour démarrer)
+// Plage mémoire virtuelle dédiée au Heap (agrandi à 2 Mio pour les grands fichiers et le mode réel)
 pub const HEAP_START: usize = 0x_4444_4444_0000;
-pub const HEAP_SIZE: usize = 100 * 1024; // 100 KiB
+pub const HEAP_SIZE: usize = 2 * 1024 * 1024; // 2 Mio
 
 // --- [STATIC 1 : ALLOCATOR] ---
 // Description : Allocateur global du noyau pour Vec, String, Box, etc.
