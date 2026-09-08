@@ -21,6 +21,8 @@ pub mod allocator;
 pub mod memory;
 pub mod journal;
 pub mod task; // Module d'ordonnancement préemptif et threads noyau
+pub mod session;
+
 
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
@@ -62,18 +64,7 @@ fn synchroniser_caps_lock() {
     }
 }
 
-// --- [SECTION 3 : TÂCHE SENTINELLE D'ÉPREUVE PRÉEMPTIVE] ---
-// Boucle infinie stricte sans aucun appel coopératif à ceder()
-fn tache_epreuve_preemption() {
-    let mut compteur: u64 = 0;
-    loop {
-        compteur = compteur.wrapping_add(1);
-        // Toutes les ~150 millions d'itérations, écrit une trace dans le journal
-        if compteur % 150_000_000 == 0 {
-            crate::klog!("[TEST] Sentinelle en rotation preemptive continue");
-        }
-    }
-}
+
 
 // --- [SECTION 4 : INITIALISATION DU NOYAU] ---
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
@@ -107,9 +98,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     // 5. Initialisation du sous-système multitâche (Tâche 0 = noyau / shell)
     task::initialiser();
 
-    // 6. Démarrage de la tâche sentinelle en arrière-plan
-    task::creer_tache("sentinelle", tache_epreuve_preemption);
-
+   
     // 7. Journalisation des étapes d'initialisation
     crate::klog!("[KRN] QBX Microkernel v0.1 démarre");
     crate::klog!("[CPU] Initialisation IDT et PIC terminée, interruptions activées");
@@ -119,7 +108,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     crate::klog!("[SHL] Shell interactif initialisé");
 
     println!("Système prêt.\n");
-    print!("qbx:{}> ", fs::chemin_actuel());
+    print!("qbx:{}{} ", fs::chemin_actuel(), session::symbole_prompt());
 
     synchroniser_caps_lock();
 

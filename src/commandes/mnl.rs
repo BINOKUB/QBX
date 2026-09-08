@@ -64,6 +64,25 @@ pub fn executer(commande: &str) {
             println!("     l'état d'exécution (ACTIF, PRÊT, TERMINÉ) et le nom assigné.\n");
             println!("QBX v0.1.0                      Révision 0.1                      TSK(1)");
         }
+            "su" => {
+            println!("SU(1)                       Manuel de référence QBX                       SU(1)\n");
+            println!("NOM");
+            println!("     su - Gestion des niveaux de privilèges et d'autorité\n");
+            println!("SYNOPSIS");
+            println!("     su [-adm | -arc | -d]\n");
+            println!("DESCRIPTION");
+            println!("     Bascule le niveau d'autorité de la session courante après");
+            println!("     vérification du mot de passe associé (saisie masquée par *).");
+            println!("     Le symbole de l'invite de commande reflète le rang actif :\n");
+            println!("       '>' Opérateur      Mode restreint de surveillance et d'exploitation.");
+            println!("       '#' Administrateur Gestion avancée et opérations de défense (-adm).");
+            println!("       '!' Architecte     Contrôle matériel, mémoire et noyau (-arc).\n");
+            println!("OPTIONS");
+            println!("     -adm    Élévation au palier Administrateur.");
+            println!("     -arc    Élévation au palier Architecte.");
+            println!("     -d      Rétrogradation immédiate d'un palier (identique à exit).\n");
+            println!("QBX v0.1.0                      Révision 0.1                       SU(1)");
+        }
         "edt" => {
             let texte_manuel = "EDT(1)                      Manuel de référence QBX                      EDT(1)\n\
 \n\
