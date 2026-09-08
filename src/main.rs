@@ -1,7 +1,6 @@
-// QBX Core - Révision 1.2
+// QBX Core - Révision 1.3
 // Fichier : src/main.rs
-// Description : Point d'entrée du noyau, initialisation mémoire, ordonnanceur
-//               préemptif et boucle de gestion asynchrone
+// Description : Point d'entrée du noyau, initialisation ordonnée et démarrage préemptif sécurisé
 
 #![no_std]
 #![no_main]
@@ -20,9 +19,8 @@ pub mod fs;
 pub mod allocator;
 pub mod memory;
 pub mod journal;
-pub mod task; // Module d'ordonnancement préemptif et threads noyau
+pub mod task;
 pub mod session;
-
 
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
@@ -32,10 +30,8 @@ use pc_keyboard::{Keyboard, ScancodeSet1, layouts, HandleControl};
 use spin::Mutex;
 use lazy_static::lazy_static;
 
-// Définition du point d'entrée appelé par le chargeur d'amorçage
 entry_point!(kernel_main);
 
-// --- [SECTION 1 : GESTIONNAIRE DE PANIQUE] ---
 #[panic_handler]
 fn gestionnaire_panic(information: &PanicInfo) -> ! {
     println!("{}", information);
@@ -44,7 +40,6 @@ fn gestionnaire_panic(information: &PanicInfo) -> ! {
     }
 }
 
-// --- [SECTION 2 : DÉCODEUR CLAVIER] ---
 lazy_static! {
     static ref KEYBOARD_DECODER: Mutex<Keyboard<layouts::Us104Key, ScancodeSet1>> =
         Mutex::new(Keyboard::new(
@@ -64,9 +59,6 @@ fn synchroniser_caps_lock() {
     }
 }
 
-
-
-// --- [SECTION 4 : INITIALISATION DU NOYAU] ---
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
     println!("  ____  ____  __  __");
     println!(" / __ \\|  _ \\ \\ \\/ /");
@@ -76,12 +68,11 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     println!("=== QBX - EXP (Québec UNIX) v0.1 ===");
     println!("Initialisation du système...\n");
 
-    // 1. Initialisation IDT, contrôleur PIC et activation des interruptions
+    // 1. Initialisation IDT et contrôleur PIC (interruptions matérielles laissées masquées)
     interrupts::init_idt();
     unsafe { interrupts::PICS.lock().initialize() };
-    x86_64::instructions::interrupts::enable();
 
-    // 2. Initialisation de la mémoire paginée et de l'allocateur de cadres
+    // 2. Initialisation pagination physique et virtuelle
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
@@ -91,17 +82,16 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
         panic!("Échec de l'initialisation du Heap : {:?}", e);
     }
 
-    // 4. Sauvegarde du contexte de pagination pour l'auto-expansion dynamique
+    // 4. Contexte mémoire global
     memory::init_contexte(mapper, frame_allocator);
     println!("Heap 2 MiB : OK");
 
-    // 5. Initialisation du sous-système multitâche (Tâche 0 = noyau / shell)
+    // 5. Initialisation du sous-système multitâche (Tâche 0 noyau)
     task::initialiser();
 
-   
-    // 7. Journalisation des étapes d'initialisation
+    // 6. Journalisation des étapes d'initialisation
     crate::klog!("[KRN] QBX Microkernel v0.1 démarre");
-    crate::klog!("[CPU] Initialisation IDT et PIC terminée, interruptions activées");
+    crate::klog!("[CPU] Initialisation IDT et PIC terminée");
     crate::klog!("[MEM] Pagination physique et virtuelle initialisée");
     crate::klog!("[ALC] Heap de 2 MiB initialisé avec succès");
     crate::klog!("[VFS] Système de fichiers en mémoire monté sur '/'");
@@ -112,7 +102,10 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     synchroniser_caps_lock();
 
-    // --- [SECTION 5 : BOUCLE D'ÉVÉNEMENTS DU SHELL] ---
+    // 7. Activation des interruptions une fois l'ensemble des sous-systèmes prêt
+    x86_64::instructions::interrupts::enable();
+
+    // --- [BOUCLE DE GESTION DU SHELL] ---
     loop {
         let scancode_opt = x86_64::instructions::interrupts::without_interrupts(|| {
             clavier_queue::SCANCODE_QUEUE.lock().pop()
@@ -141,7 +134,6 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
                 }
             }
         } else {
-            // Cession volontaire si rien n'est tapé, avant l'attente basse consommation
             task::ceder();
             x86_64::instructions::hlt();
         }

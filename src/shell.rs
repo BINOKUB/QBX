@@ -1,7 +1,6 @@
-// QBX Shell Module - Révision 1.3
+// QBX Shell Module - Révision 1.5
 // Fichier : src/shell.rs
-// Description : Interpréteur avec invite dynamique, historique, saisie masquée (*),
-//               gestion des privilèges su et protection des commandes critiques
+// Description : Interpréteur avec historique, redirection, saisie masquée (*) et provisioning clandestin
 
 use crate::{commandes, print, println, power, vga_buffer, session};
 use spin::Mutex;
@@ -12,9 +11,16 @@ const BUFFER_SIZE: usize = 256;
 const HISTORIQUE_TAILLE: usize = 10;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ActionSecurite {
+    Elevation(session::NiveauPrivilege),
+    InitArchitecte,
+    InitAdministrateur,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ModeSaisie {
     Normal,
-    MotDePasse(session::NiveauPrivilege),
+    MotDePasse(ActionSecurite),
 }
 
 pub struct Shell {
@@ -51,65 +57,76 @@ impl Shell {
 
     pub fn introduire_caractere(&mut self, c: char) {
         match self.mode {
-            ModeSaisie::MotDePasse(cible) => {
-                match c {
-                    '\n' | '\r' => {
-                        println!();
-                        let mdp = core::str::from_utf8(&self.tampon_mdp[..self.cursor_mdp]).unwrap_or("");
-                        if session::tenter_elevation(cible, mdp) {
-                            println!("Privilèges accordés.");
-                        } else {
-                            println!("Désolé.");
+            ModeSaisie::MotDePasse(action) => match c {
+                '\n' | '\r' => {
+                    println!();
+                    let mdp = core::str::from_utf8(&self.tampon_mdp[..self.cursor_mdp]).unwrap_or("");
+                    match action {
+                        ActionSecurite::InitArchitecte => {
+                            match session::sceller_cle_architecte(mdp) {
+                                Ok(()) => println!("Clé Architecte scellée avec succès. Connectez-vous avec 'su -arc'."),
+                                Err(e) => println!("qbx: {}", e),
+                            }
                         }
-                        self.cursor_mdp = 0;
-                        self.tampon_mdp = [0; 64];
-                        self.mode = ModeSaisie::Normal;
+                        ActionSecurite::InitAdministrateur => {
+                            match session::sceller_cle_administrateur(mdp) {
+                                Ok(()) => println!("Clé Administrateur définie avec succès."),
+                                Err(e) => println!("qbx: {}", e),
+                            }
+                        }
+                        ActionSecurite::Elevation(cible) => {
+                            match session::tenter_elevation(cible, mdp) {
+                                Ok(()) => println!("Privilèges accordés."),
+                                Err(e) => println!("qbx: {}", e),
+                            }
+                        }
+                    }
+                    session::zeroiser(&mut self.tampon_mdp);
+                    self.cursor_mdp = 0;
+                    self.mode = ModeSaisie::Normal;
+                    self.afficher_prompt();
+                }
+                '\x08' | '\x7f' => {
+                    if self.cursor_mdp > 0 {
+                        self.cursor_mdp -= 1;
+                        self.tampon_mdp[self.cursor_mdp] = 0;
+                        vga_buffer::ECRIVAIN.lock().effacer_dernier_caractere();
+                    }
+                }
+                caractere if (caractere as u32) >= 0x20 && (caractere as u32) <= 0x7E => {
+                    if self.cursor_mdp < 63 {
+                        self.tampon_mdp[self.cursor_mdp] = caractere as u8;
+                        self.cursor_mdp += 1;
+                        print!("*");
+                    }
+                }
+                _ => {}
+            },
+            ModeSaisie::Normal => match c {
+                '\n' | '\r' => {
+                    println!();
+                    self.enregistrer_dans_historique();
+                    self.executer_commande();
+                    self.reinitialiser();
+                    if self.mode == ModeSaisie::Normal {
                         self.afficher_prompt();
                     }
-                    '\x08' | '\x7f' => {
-                        if self.cursor_mdp > 0 {
-                            self.cursor_mdp -= 1;
-                            self.tampon_mdp[self.cursor_mdp] = 0;
-                            vga_buffer::ECRIVAIN.lock().effacer_dernier_caractere();
-                        }
-                    }
-                    caractere if (caractere as u32) >= 0x20 && (caractere as u32) <= 0x7E => {
-                        if self.cursor_mdp < 63 {
-                            self.tampon_mdp[self.cursor_mdp] = caractere as u8;
-                            self.cursor_mdp += 1;
-                            print!("*");
-                        }
-                    }
-                    _ => {}
                 }
-            }
-            ModeSaisie::Normal => {
-                match c {
-                    '\n' | '\r' => {
-                        println!();
-                        self.enregistrer_dans_historique();
-                        self.executer_commande();
-                        self.reinitialiser();
-                        if self.mode == ModeSaisie::Normal {
-                            self.afficher_prompt();
-                        }
-                    }
-                    '\x08' | '\x7f' => {
-                        if self.cursor > 0 {
-                            self.cursor -= 1;
-                            self.buffer[self.cursor] = 0;
-                            vga_buffer::ECRIVAIN.lock().effacer_dernier_caractere();
-                        }
-                    }
-                    caractere => {
-                        if self.cursor < BUFFER_SIZE - 1 {
-                            self.buffer[self.cursor] = caractere as u8;
-                            self.cursor += 1;
-                            print!("{}", caractere);
-                        }
+                '\x08' | '\x7f' => {
+                    if self.cursor > 0 {
+                        self.cursor -= 1;
+                        self.buffer[self.cursor] = 0;
+                        vga_buffer::ECRIVAIN.lock().effacer_dernier_caractere();
                     }
                 }
-            }
+                caractere => {
+                    if self.cursor < BUFFER_SIZE - 1 {
+                        self.buffer[self.cursor] = caractere as u8;
+                        self.cursor += 1;
+                        print!("{}", caractere);
+                    }
+                }
+            },
         }
     }
 
@@ -117,7 +134,6 @@ impl Shell {
         if self.mode != ModeSaisie::Normal || self.historique_count == 0 || self.historique_index == 0 {
             return;
         }
-
         self.historique_index -= 1;
         self.remplacer_ligne_saisie(self.historique_index);
     }
@@ -126,7 +142,6 @@ impl Shell {
         if self.mode != ModeSaisie::Normal || self.historique_index >= self.historique_count {
             return;
         }
-
         self.historique_index += 1;
         if self.historique_index == self.historique_count {
             self.effacer_ligne_courante();
@@ -142,7 +157,6 @@ impl Shell {
         let len = self.historique_lens[idx];
         self.buffer[..len].copy_from_slice(&self.historique[idx][..len]);
         self.cursor = len;
-
         if let Ok(cmd_str) = core::str::from_utf8(&self.buffer[..self.cursor]) {
             print!("{}", cmd_str);
         }
@@ -156,10 +170,7 @@ impl Shell {
     }
 
     fn enregistrer_dans_historique(&mut self) {
-        if self.cursor == 0 {
-            return;
-        }
-
+        if self.cursor == 0 { return; }
         if self.historique_count < HISTORIQUE_TAILLE {
             let slot = self.historique_count;
             self.historique[slot][..self.cursor].copy_from_slice(&self.buffer[..self.cursor]);
@@ -179,24 +190,16 @@ impl Shell {
 
     fn executer_commande(&mut self) {
         crate::allocator::verifier_et_etendre();
-
         let entree = match core::str::from_utf8(&self.buffer[..self.cursor]) {
             Ok(s) => alloc::string::String::from(s.trim()),
             Err(_) => return,
         };
-
-        if entree.is_empty() {
-            return;
-        }
+        if entree.is_empty() { return; }
 
         let (commande_a_executer, redirection) = if let Some(idx) = entree.find(">>") {
-            let cmd = entree[..idx].trim();
-            let cible = entree[idx + 2..].trim();
-            (cmd, Some((cible, true)))
+            (entree[..idx].trim(), Some((entree[idx + 2..].trim(), true)))
         } else if let Some(idx) = entree.find('>') {
-            let cmd = entree[..idx].trim();
-            let cible = entree[idx + 1..].trim();
-            (cmd, Some((cible, false)))
+            (entree[..idx].trim(), Some((entree[idx + 1..].trim(), false)))
         } else {
             (entree.as_str(), None)
         };
@@ -206,19 +209,15 @@ impl Shell {
                 println!("qbx: Erreur de syntaxe : nom de fichier manquant pour la redirection");
                 return;
             }
-
             vga_buffer::demarrer_capture();
             self.evaluer_commande(commande_a_executer);
-
             if let Some(texte_sortie) = vga_buffer::arreter_capture() {
                 let mut donnees_finales = Vec::new();
-
                 if est_ajout {
                     if let Some(existant) = crate::fs::lire(cible_nom) {
                         donnees_finales.extend_from_slice(&existant);
                     }
                 }
-
                 donnees_finales.extend_from_slice(texte_sortie.as_bytes());
                 crate::fs::ecrire(cible_nom, &donnees_finales);
             }
@@ -233,38 +232,67 @@ impl Shell {
         let argument = parties.next().unwrap_or("");
 
         match commande {
+            "initarch" => {
+                if session::est_archi_initialise() {
+                    println!("qbx: Clé Architecte déjà scellée sur ce système.");
+                    return;
+                }
+                self.mode = ModeSaisie::MotDePasse(ActionSecurite::InitArchitecte);
+                self.cursor_mdp = 0;
+                session::zeroiser(&mut self.tampon_mdp);
+                print!("Définir mot de passe Architecte (!) : ");
+            }
+            "initadm" => {
+                if !session::verifier_privilege(session::NiveauPrivilege::Architecte) {
+                    println!("initadm: action réservée au niveau Architecte (EPERM)");
+                    crate::klog!("[SEC] Tentative non autorisée d'accès à initadm");
+                    return;
+                }
+                self.mode = ModeSaisie::MotDePasse(ActionSecurite::InitAdministrateur);
+                self.cursor_mdp = 0;
+                session::zeroiser(&mut self.tampon_mdp);
+                print!("Définir mot de passe Administrateur (#) : ");
+            }
             "su" => match argument {
                 "-adm" => {
-                    self.mode = ModeSaisie::MotDePasse(session::NiveauPrivilege::Administrateur);
+                    if !session::est_admin_initialise() {
+                        println!("qbx: Compte Administrateur non configuré (initadm requis sous !).");
+                        return;
+                    }
+                    self.mode = ModeSaisie::MotDePasse(ActionSecurite::Elevation(session::NiveauPrivilege::Administrateur));
                     self.cursor_mdp = 0;
-                    self.tampon_mdp = [0; 64];
+                    session::zeroiser(&mut self.tampon_mdp);
                     print!("Mot de passe [Administrateur] : ");
                 }
                 "-arc" => {
-                    self.mode = ModeSaisie::MotDePasse(session::NiveauPrivilege::Architecte);
+                    if !session::est_archi_initialise() {
+                        println!("qbx: Clé Architecte non configurée sur ce système.");
+                        return;
+                    }
+                    self.mode = ModeSaisie::MotDePasse(ActionSecurite::Elevation(session::NiveauPrivilege::Architecte));
                     self.cursor_mdp = 0;
-                    self.tampon_mdp = [0; 64];
+                    session::zeroiser(&mut self.tampon_mdp);
                     print!("Mot de passe [Architecte] : ");
                 }
                 "-d" => {
                     if session::retrograder() {
-                        println!("Rétrogradation accordée.");
+                        println!("Rétrogradation au mode Opérateur.");
                     } else {
-                        println!("Session déjà au niveau de base (Opérateur).");
+                        println!("Déjà au mode Opérateur.");
                     }
                 }
                 _ => {
                     println!("Usage : su [-adm | -arc | -d]");
-                    println!("  -adm : Élévation au palier Administrateur ('#')");
-                    println!("  -arc : Élévation au palier Architecte ('!')");
-                    println!("  -d   : Rétrogradation d'un palier");
+                    println!("  -adm : Élévation Administrateur ('#')");
+                    println!("  -arc : Élévation Architecte ('!')");
+                    println!("  -d   : Rétrogradation vers Opérateur ('>')");
                 }
             },
             "exit" => {
                 if session::retrograder() {
-                    println!("Rétrogradation de session.");
+                    println!("Rétrogradation au mode Opérateur.");
                 } else {
-                    println!("Session minimale atteinte (Opérateur).");
+                    println!("Session minimale (Opérateur).");
                 }
             }
             "qtr" => {
@@ -326,7 +354,6 @@ impl Shell {
                 commandes::ver::executer(reste_args);
             }
             "tpf" => {
-                // Barrière de sécurité pour le crash Page Fault
                 if !session::verifier_privilege(session::NiveauPrivilege::Architecte) {
                     println!("tpf: opération réservée au niveau Architecte (EPERM)");
                     crate::klog!("[SEC] Tentative non autorisée de déclenchement Page Fault");
@@ -339,30 +366,13 @@ impl Shell {
                 }
             }
             "aide" => {
-                println!("Lexique des commandes QBX :");
-                println!("  su   : Gérer les privilèges de session (su -adm, su -arc, su -d)");
-                println!("  exit : Rétrograder d'un palier de privilège");
-                println!("  ntr  : Nettoyer l'écran");
-                println!("  inf  : Informations système");
-                println!("  tmps : Horloge temps réel");
-                println!("  edt  : Éditeur de texte (ex: edt -l test.txt)");
-                println!("  ls   : Lister les fichiers en mémoire");
-                println!("  cat  : Afficher le contenu d'un fichier");
-                println!("  ctr  : Créer un répertoire (ex: ctr monrep)");
-                println!("  cdr  : Changer de répertoire (ex: cdr monrep, cdr ..)");
-                println!("  spp  : Supprimer un fichier ou répertoire (ex: spp test.txt)");
-                println!("  mnl  : Manuel système (ex: mnl edt, mnl su)");
-                println!("  qtr  : Quitter le système (Architecte)");
-                println!("  rnm  : Renommer (ex: rnm f1.txt f2.txt)");
-                println!("  cpr  : Copier un fichier ou répertoire (ex: cpr f1.txt f2.txt)");
-                println!("  dpc  : Déplacer un fichier ou répertoire (ex: dpc f1.txt rep/)");
-                println!("  afn  : Afficher les messages et informations du noyau");
-                println!("  tsk  : Lister les tâches et processus actifs");
-                println!("  mmr  : Statistiques mémoire et contrôle du tas");
-                println!("  ver  : Informations système et version");
-                println!("  tpf  : Déclencher un Page Fault de test (Architecte)");
-                println!("  >    : Rediriger la sortie vers un fichier (ex: ls > liste.txt)");
-                println!("  >>   : Ajouter la sortie à la fin d'un fichier");
+                println!("Commandes QBX :");
+                println!("  su       : Élévation de privilèges (su -adm, su -arc, su -d)");
+                println!("  exit     : Rétrograder au mode Opérateur");
+                println!("  tsk      : Lister les processus actifs");
+                println!("  mmr      : Statistiques mémoire (-e/-t/-c réservés Architecte)");
+                println!("  afn      : Journal d'audit et messages noyau");
+                println!("  mnl      : Manuel système");
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);

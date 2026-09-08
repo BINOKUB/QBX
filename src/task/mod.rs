@@ -107,16 +107,18 @@ impl Ordonnanceur {
 pub static ORDONNANCEUR: Mutex<Ordonnanceur> = Mutex::new(Ordonnanceur::new());
 
 pub fn initialiser() {
-    let mut ord = ORDONNANCEUR.lock();
-    let tache_principale = Box::new(Tache {
-        id: TaskId(0),
-        nom: "noyau",
-        etat: EtatTache::EnCours,
-        contexte: ContexteTache::default(),
-        pile: None,
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let mut ord = ORDONNANCEUR.lock();
+        let tache_principale = Box::new(Tache {
+            id: TaskId(0),
+            nom: "noyau",
+            etat: EtatTache::EnCours,
+            contexte: ContexteTache::default(),
+            pile: None,
+        });
+        ord.courante = Some(tache_principale);
+        crate::klog!("[TSK] Ordonnanceur initialise (Preemption active, Tache 0)");
     });
-    ord.courante = Some(tache_principale);
-    crate::klog!("[TSK] Ordonnanceur initialise (Preemption active, Tache 0)");
 }
 
 pub fn creer_tache(nom: &'static str, point_entree: fn()) -> TaskId {
