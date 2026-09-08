@@ -63,8 +63,14 @@ fn synchroniser_caps_lock() {
 // --- [FONCTION 3 : kernel_main] ---
 // Description : Point d'entrée principal du noyau.
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-    println!("=== QBX - EXP (Québec UNIX) v0.1 ===");
-    println!("Initialisation du système...");
+            println!("  ____  ____  __  __");
+            println!(" / __ \\|  _ \\ \\ \\/ /");
+            println!("| |  | | |_) ) >  < ");
+            println!("| |__| |  _ < / /\\ \\");
+            println!(" \\___\\_\\____//_/  \\_\\");
+            println!("=== QBX - EXP (Québec UNIX) v0.1 ===");
+            println!("Initialisation du système...\n");
+           
 
     interrupts::init_idt();
     unsafe { interrupts::PICS.lock().initialize() };
