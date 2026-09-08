@@ -1,6 +1,6 @@
-// QBX Interrupts Module - Révision 0.8
+// QBX Interrupts Module - Révision 0.9
 // Fichier : src/interrupts.rs
-// Description : Gestionnaire d'interruption (Exceptions x86, horloge, clavier et Page Fault #PF)
+// Description : Gestionnaire d'interruption (Exceptions x86, horloge cadencée pour préemption, clavier et Page Fault #PF)
 
 use x86_64::structures::idt::{InterruptDescriptorTable, InterruptStackFrame, PageFaultErrorCode};
 use x86_64::registers::control::Cr2;
@@ -73,13 +73,19 @@ extern "x86-interrupt" fn page_fault_handler(
     }
 }
 
+// --- [INTERRUPTION 32 : Horloge PIT (Timer)] ---
+// Cadence la préemption des tâches à chaque battement matériel
 extern "x86-interrupt" fn timer_interrupt_handler(_stack_frame: InterruptStackFrame) {
+    // 1. Clôture de l'interruption auprès du contrôleur PIC
     unsafe {
         PICS.lock().notify_end_of_interrupt(InterruptIndex::Timer.as_u8());
     }
+
+    // 2. Déclenchement de l'arbitrage préemptif (passage automatique de tâche)
+    crate::task::cadencer_preemption();
 }
 
-// --- [FONCTION 4 : keyboard_interrupt_handler] ---
+// --- [INTERRUPTION 33 : Clavier PS/2] ---
 // Interception matérielle asynchrone (Pousse le scancode et clôture immédiatement l'IRQ)
 extern "x86-interrupt" fn keyboard_interrupt_handler(_stack_frame: InterruptStackFrame) {
     use x86_64::instructions::port::Port;

@@ -1,6 +1,6 @@
-// QBX Core - Révision 0.3
+// QBX Core - Révision 0.4
 // Fichier : src/task/mod.rs
-// Description : Ordonnanceur coopératif Round-Robin, descripteur de tâche avec nommage et API d'inspection
+// Description : Ordonnanceur préemptif, cadencement par interruption Timer et commutation sécurisée
 
 pub mod context;
 
@@ -8,9 +8,13 @@ use alloc::boxed::Box;
 use alloc::collections::VecDeque;
 use alloc::vec::Vec;
 use context::{ContexteTache, basculer_contexte};
+use core::sync::atomic::{AtomicUsize, Ordering};
 use spin::Mutex;
 
-const TAILLE_PILE: usize = 32 * 1024; // 32 Ko alloués sur le tas par tâche
+const TAILLE_PILE: usize = 32 * 1024; // 32 Ko par tâche
+const QUANTUM_TICKS: usize = 1;      // Nombre de ticks PIT avant préemption (~55 ms par défaut)
+
+static COMPTEUR_TICKS: AtomicUsize = AtomicUsize::new(0);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TaskId(pub usize);
@@ -65,7 +69,10 @@ impl Tache {
     }
 }
 
+// Point d'entrée des tâches : réactive les interruptions pour permettre la préemption
 extern "C" fn trampoline_tache() -> ! {
+    x86_64::instructions::interrupts::enable();
+
     let point_entree: fn();
     unsafe {
         core::arch::asm!("mov {}, r12", out(reg) point_entree);
@@ -99,7 +106,6 @@ impl Ordonnanceur {
 
 pub static ORDONNANCEUR: Mutex<Ordonnanceur> = Mutex::new(Ordonnanceur::new());
 
-/// Initialise l'ordonnanceur en enregistrant le thread principal comme Tâche 0 ("noyau")
 pub fn initialiser() {
     let mut ord = ORDONNANCEUR.lock();
     let tache_principale = Box::new(Tache {
@@ -110,65 +116,91 @@ pub fn initialiser() {
         pile: None,
     });
     ord.courante = Some(tache_principale);
-    crate::klog!("[TSK] Ordonnanceur cooperatif initialise (Tache 0 active)");
+    crate::klog!("[TSK] Ordonnanceur initialise (Preemption active, Tache 0)");
 }
 
-/// Enregistre et place une nouvelle tâche nommée dans la file d'attente
 pub fn creer_tache(nom: &'static str, point_entree: fn()) -> TaskId {
-    let mut ord = ORDONNANCEUR.lock();
-    let id = TaskId(ord.prochain_id);
-    ord.prochain_id += 1;
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let mut ord = ORDONNANCEUR.lock();
+        let id = TaskId(ord.prochain_id);
+        ord.prochain_id += 1;
 
-    let nouvelle = Box::new(Tache::nouvelle(id, nom, point_entree));
-    ord.taches.push_back(nouvelle);
+        let nouvelle = Box::new(Tache::nouvelle(id, nom, point_entree));
+        ord.taches.push_back(nouvelle);
 
-    crate::klog!("[TSK] Tache {} ({}) creee et placee en file prete", id.0, nom);
-    id
+        crate::klog!("[TSK] Tache {} ({}) creee", id.0, nom);
+        id
+    })
 }
 
-/// Extrait une photographie de l'état actuel de toutes les tâches pour inspection
 pub fn lister_taches() -> Vec<InfoTache> {
-    let ord = ORDONNANCEUR.lock();
-    let mut liste = Vec::new();
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let ord = ORDONNANCEUR.lock();
+        let mut liste = Vec::new();
 
-    if let Some(ref courante) = ord.courante {
-        liste.push(InfoTache {
-            id: courante.id.0,
-            nom: courante.nom,
-            etat: courante.etat,
-        });
-    }
+        if let Some(ref courante) = ord.courante {
+            liste.push(InfoTache {
+                id: courante.id.0,
+                nom: courante.nom,
+                etat: courante.etat,
+            });
+        }
 
-    for t in &ord.taches {
-        liste.push(InfoTache {
-            id: t.id.0,
-            nom: t.nom,
-            etat: t.etat,
-        });
-    }
+        for t in &ord.taches {
+            liste.push(InfoTache {
+                id: t.id.0,
+                nom: t.nom,
+                etat: t.etat,
+            });
+        }
 
-    liste.sort_by_key(|t| t.id);
-    liste
+        liste.sort_by_key(|t| t.id);
+        liste
+    })
 }
 
+/// Déclenché par l'interruption Timer PIT (IRQ 0)
+pub fn cadencer_preemption() {
+    let ticks = COMPTEUR_TICKS.fetch_add(1, Ordering::Relaxed) + 1;
+    if ticks >= QUANTUM_TICKS {
+        COMPTEUR_TICKS.store(0, Ordering::Relaxed);
+        ceder();
+    }
+}
+
+/// Permutation sécurisée de tâche avec verrouillage des interruptions
 pub fn ceder() {
+    let interruptions_etaient_actives = x86_64::instructions::interrupts::are_enabled();
+    x86_64::instructions::interrupts::disable();
+
     let (ancien_ptr, nouveau_ptr) = {
         let mut ord = ORDONNANCEUR.lock();
         ord.zombies.clear();
 
         if ord.taches.is_empty() {
+            if interruptions_etaient_actives {
+                x86_64::instructions::interrupts::enable();
+            }
             return;
         }
 
         let mut ancienne = match ord.courante.take() {
             Some(t) => t,
-            None => return,
+            None => {
+                if interruptions_etaient_actives {
+                    x86_64::instructions::interrupts::enable();
+                }
+                return;
+            }
         };
 
         let mut nouvelle = match ord.taches.pop_front() {
             Some(t) => t,
             None => {
                 ord.courante = Some(ancienne);
+                if interruptions_etaient_actives {
+                    x86_64::instructions::interrupts::enable();
+                }
                 return;
             }
         };
@@ -195,12 +227,18 @@ pub fn ceder() {
     unsafe {
         basculer_contexte(ancien_ptr, nouveau_ptr);
     }
+
+    if interruptions_etaient_actives {
+        x86_64::instructions::interrupts::enable();
+    }
 }
 
 fn terminer_tache_courante() {
-    let mut ord = ORDONNANCEUR.lock();
-    if let Some(ref mut courante) = ord.courante {
-        courante.etat = EtatTache::Terminee;
-        crate::klog!("[TSK] Tache {} marquee terminee", courante.id.0);
-    }
+    x86_64::instructions::interrupts::without_interrupts(|| {
+        let mut ord = ORDONNANCEUR.lock();
+        if let Some(ref mut courante) = ord.courante {
+            courante.etat = EtatTache::Terminee;
+            crate::klog!("[TSK] Tache {} terminee", courante.id.0);
+        }
+    });
 }
