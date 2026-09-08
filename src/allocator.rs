@@ -49,3 +49,9 @@ pub fn init_heap(
 
     Ok(())
 }
+
+/// Retourne (octets_utilises, octets_libres, taille_totale)
+pub fn obtenir_statistiques() -> (usize, usize, usize) {
+    let heap = ALLOCATOR.lock();
+    (heap.used(), heap.free(), HEAP_SIZE)
+}

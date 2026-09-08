@@ -17,3 +17,5 @@ pub mod rnm;
 pub mod cpr;
 pub mod dpc;
 pub mod afn;
+pub mod mmr;
+pub mod ver;

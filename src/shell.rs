@@ -243,6 +243,13 @@ impl Shell {
             "afn" => {
                 commandes::afn::executer();
             }
+            "mmr" => {
+                commandes::mmr::executer();
+            }
+            "ver" => {
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::ver::executer(reste_args);
+            }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");
@@ -262,6 +269,8 @@ impl Shell {
                 println!("  afn  : Afficher les messages et informations du noyau");
                 println!("  >    : Rediriger la sortie vers un fichier (ex: ls > liste.txt)");
                 println!("  >>   : Ajouter la sortie a la fin d'un fichier (ex: afn >> journal.txt)");
+                println!("  mmr  : Afficher les statistiques de la mémoire (Heap)");
+                println!("  ver  : Informations système et version (ex: ver, ver -a, ver -r)");
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);
