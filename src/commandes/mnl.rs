@@ -1,6 +1,6 @@
-// QBX Commande - Révision 0.7
+// QBX Commande - Révision 0.8
 // Fichier : src/commandes/mnl.rs
-// Description : Manuel du système QBX avec support du pager modulaire pour les pages longues
+// Description : Manuel du système QBX avec support du pager modulaire et couverture complète des utilitaires
 
 use crate::println;
 use crate::commandes::pager;
@@ -12,7 +12,9 @@ pub fn executer(commande: &str) {
 
     if cmd.is_empty() {
         println!("Usage : mnl <commande>");
-        println!("Commandes disponibles : ntr, inf, tmps, edt, ls, cat, mnl, qtr");
+        println!("Commandes disponibles :");
+        println!("  ntr, inf, tmps, edt, ls, cat, ctr, cdr, spp, rnm,");
+        println!("  cpr, dpc, afn, mmr, ver, mnl, qtr");
         return;
     }
 
@@ -98,47 +100,137 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("     fichiers VFS (RAMDisk). Affiche le nom et la taille en octets.\n");
             println!("QBX v0.1.0                      Révision 0.1                      LS(1)");
         }
-            "rnm" => {
-            println!("--- MANUEL : rnm (Renommer) ---");
-            println!("USAGE :");
-            println!("  rnm <ancien_fichier> <nouveau_fichier>");
-            println!("  rnm -r <ancien_rep> <nouveau_rep>");
-            println!("DESCRIPTION :");
-            println!("  Renomme un fichier ou un répertoire dans le dossier courant.");
-            println!("  L'option '-r' est strictement requise pour les répertoires");
-            println!("  et interdite pour les fichiers.");
-        }
-            "spp" => {
-            println!("--- MANUEL : spp (Supprimer) ---");
-            println!("USAGE :");
-            println!("  spp <nom_fichier>");
-            println!("  spp -r <nom_repertoire>");
-            println!("DESCRIPTION :");
-            println!("  Supprime définitivement un fichier ou un dossier du RAMDisk.");
-            println!("  L'option '-r' est obligatoire pour détruire un répertoire.");
-        }
         "cat" => {
-            println!("CAT(1)                      Manuel de référence QBX                      CAT(1)");
+            println!("CAT(1)                      Manuel de référence QBX                      CAT(1)\n");
             println!("NOM");
-            println!("     cat - Afficher le contenu d'un fichier");
+            println!("     cat - Afficher le contenu d'un fichier\n");
             println!("SYNOPSIS");
-            println!("     cat <nom_fichier> [-ppp]");
+            println!("     cat <nom_fichier> [-ppp]\n");
             println!("DESCRIPTION");
             println!("     Recherche un fichier texte dans la mémoire virtuelle (VFS)");
-            println!("     et imprime son contenu brut sur la sortie standard.");
+            println!("     et imprime son contenu brut sur la sortie standard.\n");
             println!("OPTIONS");
-            println!("     -ppp    Active la pagination page par page pour les fichiers longs.");
+            println!("     -ppp    Active la pagination page par page pour les fichiers longs.\n");
             println!("QBX v0.1.0                      Révision 0.2                      CAT(1)");
+        }
+        "ctr" => {
+            println!("CTR(1)                      Manuel de référence QBX                      CTR(1)\n");
+            println!("NOM");
+            println!("     ctr - Créer un répertoire\n");
+            println!("SYNOPSIS");
+            println!("     ctr <nom_repertoire>\n");
+            println!("DESCRIPTION");
+            println!("     Crée un nouveau répertoire vide dans le système de fichiers VFS.\n");
+            println!("QBX v0.1.0                      Révision 0.1                      CTR(1)");
+        }
+        "cdr" => {
+            println!("CDR(1)                      Manuel de référence QBX                      CDR(1)\n");
+            println!("NOM");
+            println!("     cdr - Changer de répertoire courant\n");
+            println!("SYNOPSIS");
+            println!("     cdr <chemin>\n");
+            println!("DESCRIPTION");
+            println!("     Permet de naviguer dans l'arborescence des dossiers du VFS.\n");
+            println!("QBX v0.1.0                      Révision 0.1                      CDR(1)");
+        }
+        "spp" => {
+            println!("SPP(1)                      Manuel de référence QBX                      SPP(1)\n");
+            println!("NOM");
+            println!("     spp - Supprimer un élément du système de fichiers\n");
+            println!("SYNOPSIS");
+            println!("     spp <nom_fichier>");
+            println!("     spp -r <nom_repertoire>\n");
+            println!("DESCRIPTION");
+            println!("     Supprime définitivement un fichier ou un dossier du RAMDisk.");
+            println!("     L'option '-r' est obligatoire pour détruire un répertoire.\n");
+            println!("QBX v0.1.0                      Révision 0.1                      SPP(1)");
+        }
+        "rnm" => {
+            println!("RNM(1)                      Manuel de référence QBX                      RNM(1)\n");
+            println!("NOM");
+            println!("     rnm - Renommer un élément\n");
+            println!("SYNOPSIS");
+            println!("     rnm <ancien_fichier> <nouveau_fichier>");
+            println!("     rnm -r <ancien_rep> <nouveau_rep>\n");
+            println!("DESCRIPTION");
+            println!("     Renomme un fichier ou un répertoire dans le dossier courant.");
+            println!("     L'option '-r' est requise pour renommer un répertoire.\n");
+            println!("QBX v0.1.0                      Révision 0.1                      RNM(1)");
+        }
+        "cpr" => {
+            println!("CPR(1)                      Manuel de référence QBX                      CPR(1)\n");
+            println!("NOM");
+            println!("     cpr - Copier un fichier ou un répertoire\n");
+            println!("SYNOPSIS");
+            println!("     cpr <source> <destination>");
+            println!("     cpr -r <rep_source> <rep_destination>\n");
+            println!("DESCRIPTION");
+            println!("     Duplique un fichier ou une arborescence complète dans le VFS.");
+            println!("     L'option '-r' est requise pour copier récursivement un dossier.\n");
+            println!("QBX v0.1.0                      Révision 0.1                      CPR(1)");
+        }
+        "dpc" => {
+            println!("DPC(1)                      Manuel de référence QBX                      DPC(1)\n");
+            println!("NOM");
+            println!("     dpc - Déplacer un élément\n");
+            println!("SYNOPSIS");
+            println!("     dpc <source> <destination>\n");
+            println!("DESCRIPTION");
+            println!("     Déplace un fichier ou un dossier vers un nouvel emplacement du VFS.\n");
+            println!("QBX v0.1.0                      Révision 0.1                      DPC(1)");
+        }
+        "afn" => {
+            println!("AFN(1)                      Manuel de référence QBX                      AFN(1)\n");
+            println!("NOM");
+            println!("     afn - Journal des messages noyau\n");
+            println!("SYNOPSIS");
+            println!("     afn\n");
+            println!("DESCRIPTION");
+            println!("     Affiche l'ensemble des événements, alertes et messages consignés");
+            println!("     dans le journal circulaire (klog) depuis le démarrage.\n");
+            println!("QBX v0.1.0                      Révision 0.1                      AFN(1)");
+        }
+        "mmr" => {
+            println!("MMR(1)                      Manuel de référence QBX                      MMR(1)\n");
+            println!("NOM");
+            println!("     mmr - Statistiques de la mémoire vive (Heap)\n");
+            println!("SYNOPSIS");
+            println!("     mmr\n");
+            println!("DESCRIPTION");
+            println!("     Interroge l'allocateur global du noyau pour afficher l'état");
+            println!("     en temps réel du tas (Heap) de QBX :");
+            println!("       - Plage d'adresses virtuelles allouée");
+            println!("       - Capacité totale configurée");
+            println!("       - Espace actuellement consommé et pourcentage");
+            println!("       - Espace mémoire libre disponible\n");
+            println!("QBX v0.1.0                      Révision 0.1                      MMR(1)");
+        }
+        "ver" => {
+            println!("VER(1)                      Manuel de référence QBX                      VER(1)\n");
+            println!("NOM");
+            println!("     ver - Identification, version et architecture système\n");
+            println!("SYNOPSIS");
+            println!("     ver [-asnmrv]\n");
+            println!("DESCRIPTION");
+            println!("     Restitue les informations d'identification du noyau QBX.");
+            println!("     Sans argument, affiche un résumé synthétique.\n");
+            println!("OPTIONS");
+            println!("     -a      Affiche l'ensemble des champs d'identification.");
+            println!("     -s      Affiche le nom du système (QBX).");
+            println!("     -n      Affiche le nom d'hôte de la machine (qbx-box).");
+            println!("     -r      Affiche le niveau de révision ou release.");
+            println!("     -v      Affiche la description interne du noyau.");
+            println!("     -m, -p  Affiche l'architecture matérielle cible (x86_64).\n");
+            println!("QBX v0.1.0                      Révision 0.1                      VER(1)");
         }
         "mnl" => {
             println!("MNL(1)                      Manuel de référence QBX                      MNL(1)\n");
             println!("NOM");
-            println!("     mnl - Manuel système\n");
+            println!("     mnl - Manuel de référence système\n");
             println!("SYNOPSIS");
             println!("     mnl <commande>\n");
             println!("DESCRIPTION");
-            println!("     Affiche la page de manuel formatée d'une commande système.");
-            println!("     Inspiré du format classique des pages MAN UNIX.\n");
+            println!("     Affiche la page de manuel formatée d'une commande système.\n");
             println!("QBX v0.1.0                      Révision 0.1                      MNL(1)");
         }
         "qtr" => {
@@ -152,26 +244,6 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("     coupure d'alimentation sur les ports ACPI/APM.\n");
             println!("QBX v0.1.0                      Révision 0.1                      QTR(1)");
         }
-        "ctr" => {
-            println!("CTR(1)                      Manuel de référence QBX                      CTR(1)");
-            println!("NOM");
-            println!("     ctr - Créer un répertoire");
-            println!("SYNOPSIS");
-            println!("     ctr <nom_repertoire>");
-            println!("DESCRIPTION");
-            println!("     Crée un nouveau répertoire vide dans le système de fichiers VFS.");
-            println!("QBX v0.1.0                      Révision 0.1                      CTR(1)");
-        }
-            "cdr" => {
-    println!("CDR(1)                      Manuel de référence QBX                      CDR(1)");
-    println!("NOM");
-    println!("     cdr - Changer de répertoire courant");
-    println!("SYNOPSIS");
-    println!("     cdr <chemin>");
-    println!("DESCRIPTION");
-    println!("     Permet de naviguer dans l'arborescence des dossiers du VFS.");
-    println!("QBX v0.1.0                      Révision 0.1                      CDR(1)");
-}
         inconnu => {
             println!("Aucune page de manuel pour : {}", inconnu);
             println!("Tapez 'mnl' sans argument pour voir la liste des commandes.");

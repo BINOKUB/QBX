@@ -4,7 +4,8 @@
 //! inspirée de l'architecture BSD cp(1).
 
 use alloc::string::String;
-use alloc::vec::Vec;
+// ON ALLOUE DYNAMIQUEMENT A LA PLACE DU STATIC
+// use alloc::vec::Vec;
 
 /// Codes d'erreurs standardisés pour les opérations VFS.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

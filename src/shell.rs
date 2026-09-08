@@ -250,6 +250,15 @@ impl Shell {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 commandes::ver::executer(reste_args);
             }
+            "tpf" => {
+                println!("[QBX] Déclenchement volontaire d'un Page Fault sur 0xdeadbeef...");
+
+                // Pointeur u8 (alignement 1 octet) avec écriture volatile directe
+                let ptr = 0xdead_beef as *mut u8;
+                unsafe {
+                    core::ptr::write_volatile(ptr, 42);
+                }
+            }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");
@@ -271,6 +280,7 @@ impl Shell {
                 println!("  >>   : Ajouter la sortie a la fin d'un fichier (ex: afn >> journal.txt)");
                 println!("  mmr  : Afficher les statistiques de la mémoire (Heap)");
                 println!("  ver  : Informations système et version (ex: ver, ver -a, ver -r)");
+                println!("  tpf  : Déclencher un Page Fault de test (#PF sur 0xdeadbeef)");
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);
