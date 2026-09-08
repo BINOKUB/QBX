@@ -1,6 +1,6 @@
-// QBX Shell Module - Révision 1.0
+// QBX Shell Module - Révision 1.1
 // Fichier : src/shell.rs
-// Description : Gestionnaire de ligne de commande avec historique et redirection de flux (> et >>)
+// Description : Gestionnaire de ligne de commande avec historique, redirection de flux (> et >>) et support d'arguments pour mmr
 
 use crate::{commandes, print, println, power, vga_buffer};
 use spin::Mutex;
@@ -123,10 +123,8 @@ impl Shell {
         self.historique_index = self.historique_count;
     }
 
-   // --- [FONCTION 1.8 : executer_commande] ---
-    // Gère le découpage des flux (> et >>) et active la capture de sortie si nécessaire.
+    // --- [FONCTION 1.8 : executer_commande] ---
     fn executer_commande(&mut self) {
-        // On copie la saisie dans une String possédée pour libérer l'emprunt sur self.buffer
         let entree = match core::str::from_utf8(&self.buffer[..self.cursor]) {
             Ok(s) => alloc::string::String::from(s.trim()),
             Err(_) => return,
@@ -136,15 +134,14 @@ impl Shell {
             return;
         }
 
-        // Détection des redirections
         let (commande_a_executer, redirection) = if let Some(idx) = entree.find(">>") {
             let cmd = entree[..idx].trim();
             let cible = entree[idx + 2..].trim();
-            (cmd, Some((cible, true))) // true = mode append (>>)
+            (cmd, Some((cible, true)))
         } else if let Some(idx) = entree.find('>') {
             let cmd = entree[..idx].trim();
             let cible = entree[idx + 1..].trim();
-            (cmd, Some((cible, false))) // false = mode écrasement (>)
+            (cmd, Some((cible, false)))
         } else {
             (entree.as_str(), None)
         };
@@ -155,13 +152,9 @@ impl Shell {
                 return;
             }
 
-            // Démarrage de l'interception de sortie
             vga_buffer::demarrer_capture();
-
-            // Exécution de la commande avec sortie redirigée
             Self::evaluer_commande(commande_a_executer);
 
-            // Récupération de la sortie interceptée
             if let Some(texte_sortie) = vga_buffer::arreter_capture() {
                 let mut donnees_finales = Vec::new();
 
@@ -180,7 +173,6 @@ impl Shell {
     }
 
     // --- [FONCTION 1.9 : evaluer_commande] ---
-    // Fonction associée n'empruntant pas self
     fn evaluer_commande(entree: &str) {
         let mut parties = entree.split_whitespace();
         let commande = parties.next().unwrap_or("");
@@ -244,7 +236,8 @@ impl Shell {
                 commandes::afn::executer();
             }
             "mmr" => {
-                commandes::mmr::executer();
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::mmr::executer(reste_args);
             }
             "ver" => {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
@@ -252,8 +245,6 @@ impl Shell {
             }
             "tpf" => {
                 println!("[QBX] Déclenchement volontaire d'un Page Fault sur 0xdeadbeef...");
-
-                // Pointeur u8 (alignement 1 octet) avec écriture volatile directe
                 let ptr = 0xdead_beef as *mut u8;
                 unsafe {
                     core::ptr::write_volatile(ptr, 42);
@@ -278,7 +269,7 @@ impl Shell {
                 println!("  afn  : Afficher les messages et informations du noyau");
                 println!("  >    : Rediriger la sortie vers un fichier (ex: ls > liste.txt)");
                 println!("  >>   : Ajouter la sortie a la fin d'un fichier (ex: afn >> journal.txt)");
-                println!("  mmr  : Afficher les statistiques de la mémoire (Heap)");
+                println!("  mmr  : Afficher les statistiques ou étendre le tas (ex: mmr, mmr -e)");
                 println!("  ver  : Informations système et version (ex: ver, ver -a, ver -r)");
                 println!("  tpf  : Déclencher un Page Fault de test (#PF sur 0xdeadbeef)");
             }

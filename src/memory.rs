@@ -57,3 +57,19 @@ unsafe impl FrameAllocator<Size4KiB> for BootInfoFrameAllocator {
         frame
     }
 }
+
+use spin::Mutex;
+
+pub struct ContexteMemoire {
+    pub mapper: OffsetPageTable<'static>,
+    pub frame_allocator: BootInfoFrameAllocator,
+}
+
+pub static CONTEXTE_MEMOIRE: Mutex<Option<ContexteMemoire>> = Mutex::new(None);
+
+pub fn init_contexte(mapper: OffsetPageTable<'static>, frame_allocator: BootInfoFrameAllocator) {
+    *CONTEXTE_MEMOIRE.lock() = Some(ContexteMemoire {
+        mapper,
+        frame_allocator,
+    });
+}
