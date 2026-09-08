@@ -1,6 +1,6 @@
-// QBX System - Révision 0.2
+// QBX System - Révision 0.3
 // Fichier : src/allocator.rs
-// Description : Gestionnaire d'allocation dynamique extensible (Heap) pour QBX
+// Description : Gestionnaire d'allocation dynamique extensible avec surveillance automatique du Heap
 
 use linked_list_allocator::LockedHeap;
 use x86_64::{
@@ -14,6 +14,11 @@ use spin::Mutex;
 pub const HEAP_START: usize = 0x_4444_4444_0000;
 pub const HEAP_SIZE_INITIAL: usize = 2 * 1024 * 1024; // 2 Mio
 pub const HEAP_SIZE: usize = HEAP_SIZE_INITIAL;
+
+// Seuils pour l'extension automatique
+pub const HEAP_SEUIL_CRITIQUE: usize = 256 * 1024;       // 256 Ko restants
+pub const HEAP_PAS_EXTENSION: usize = 1024 * 1024;       // Palier d'extension de 1 Mio
+pub const HEAP_PLAFOND_MAX: usize = 16 * 1024 * 1024;    // Plafond absolu de sécurité à 16 Mio
 
 pub static HEAP_TAILLE_ACTUELLE: Mutex<usize> = Mutex::new(HEAP_SIZE_INITIAL);
 
@@ -64,13 +69,19 @@ pub fn etendre_heap(octets_supplementaires: usize) -> Result<usize, &'static str
         return Ok(*HEAP_TAILLE_ACTUELLE.lock());
     }
 
-    // Alignement strict sur la taille d'une page (4096 octets)
+    let mut taille_heap = HEAP_TAILLE_ACTUELLE.lock();
+
+    // Protection contre l'emballement mémoire au-delà du plafond autorisé
+    if *taille_heap + octets_supplementaires > HEAP_PLAFOND_MAX {
+        return Err("Plafond maximal du Heap atteint (16 Mio)");
+    }
+
+    // Alignement strict sur la frontière d'une page (4096 octets)
     let taille_alignee = (octets_supplementaires + 4095) & !4095;
 
     let mut lock_contexte = crate::memory::CONTEXTE_MEMOIRE.lock();
     let contexte = lock_contexte.as_mut().ok_or("Contexte de pagination non disponible")?;
 
-    let mut taille_heap = HEAP_TAILLE_ACTUELLE.lock();
     let debut_virtuel = VirtAddr::new((HEAP_START + *taille_heap) as u64);
     let fin_virtuelle = debut_virtuel + taille_alignee as u64 - 1u64;
 
@@ -94,14 +105,31 @@ pub fn etendre_heap(octets_supplementaires: usize) -> Result<usize, &'static str
         }
     }
 
-    // Incorporation de la nouvelle tranche mémoire dans l'allocateur
+    // Incorporation immédiate du bloc physique dans la liste de l'allocateur
     unsafe {
         ALLOCATOR.lock().extend(taille_alignee);
     }
 
     *taille_heap += taille_alignee;
 
-    crate::klog!("[ALC] Heap etendu de {} Ko (Nouvelle capacite : {} Ko)", taille_alignee / 1024, *taille_heap / 1024);
+    crate::klog!(
+        "[ALC] Heap etendu de {} Ko (Nouvelle capacite : {} Ko)",
+        taille_alignee / 1024,
+        *taille_heap / 1024
+    );
 
     Ok(*taille_heap)
+}
+
+/// Contrôle préventif de l'espace libre avec déclenchement automatique de l'extension
+pub fn verifier_et_etendre() {
+    let (_, libre, total) = obtenir_statistiques();
+
+    if libre < HEAP_SEUIL_CRITIQUE && total < HEAP_PLAFOND_MAX {
+        crate::klog!(
+            "[ALC] Seuil critique franchi ({} Ko restants) : auto-extension declenchee",
+            libre / 1024
+        );
+        let _ = etendre_heap(HEAP_PAS_EXTENSION);
+    }
 }

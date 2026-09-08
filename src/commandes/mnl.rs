@@ -244,6 +244,24 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("     coupure d'alimentation sur les ports ACPI/APM.\n");
             println!("QBX v0.1.0                      Révision 0.1                      QTR(1)");
         }
+            "mmr" => {
+            println!("MMR(1)                      Manuel de référence QBX                      MMR(1)\n");
+            println!("NOM");
+            println!("     mmr - Statistiques et gestion de la mémoire vive (Heap)\n");
+            println!("SYNOPSIS");
+            println!("     mmr [-e]\n");
+            println!("DESCRIPTION");
+            println!("     Interroge l'allocateur global du noyau pour afficher l'état");
+            println!("     en temps réel du tas (Heap) de QBX :");
+            println!("       - Plage d'adresses virtuelles allouée");
+            println!("       - Capacité totale configurée");
+            println!("       - Espace actuellement consommé et pourcentage");
+            println!("       - Espace mémoire libre disponible\n");
+            println!("OPTIONS");
+            println!("     -e      Alloue et mappe dynamiquement 1 Mio (1024 Ko) de pages");
+            println!("             physiques supplémentaires pour agrandir le tas.\n");
+            println!("QBX v0.1.0                      Révision 0.2                      MMR(1)");
+        }
         inconnu => {
             println!("Aucune page de manuel pour : {}", inconnu);
             println!("Tapez 'mnl' sans argument pour voir la liste des commandes.");

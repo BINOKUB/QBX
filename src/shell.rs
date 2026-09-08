@@ -1,6 +1,6 @@
-// QBX Shell Module - Révision 1.1
+// QBX Shell Module - Révision 1.2
 // Fichier : src/shell.rs
-// Description : Gestionnaire de ligne de commande avec historique, redirection de flux (> et >>) et support d'arguments pour mmr
+// Description : Gestionnaire de ligne de commande avec historique, redirection et contrôle d'auto-expansion mémoire
 
 use crate::{commandes, print, println, power, vga_buffer};
 use spin::Mutex;
@@ -125,6 +125,9 @@ impl Shell {
 
     // --- [FONCTION 1.8 : executer_commande] ---
     fn executer_commande(&mut self) {
+        // Contrôle préventif : auto-expansion du tas si la mémoire libre passe sous 256 Ko
+        crate::allocator::verifier_et_etendre();
+
         let entree = match core::str::from_utf8(&self.buffer[..self.cursor]) {
             Ok(s) => alloc::string::String::from(s.trim()),
             Err(_) => return,
