@@ -7,6 +7,7 @@ use volatile::Volatile;
 use lazy_static::lazy_static;
 use spin::Mutex;
 use x86_64::instructions::port::Port;
+use alloc::string::String;
 
 // --- [ENUMERATION 1 : Couleur] ---
 #[allow(dead_code)]
@@ -195,6 +196,19 @@ lazy_static! {
         code_couleur: CodeCouleur::nouveau(Couleur::VertClair, Couleur::Noir),
         buffer: unsafe { &mut *(0xb8000 as *mut Buffer) },
     });
+
+    // Tampon de redirection de la sortie standard
+    pub static ref TAMPON_CAPTURE: Mutex<Option<String>> = Mutex::new(None);
+}
+
+/// Active la redirection du flux de sortie vers la mémoire
+pub fn demarrer_capture() {
+    *TAMPON_CAPTURE.lock() = Some(String::new());
+}
+
+/// Désactive la redirection et retourne le texte accumulé
+pub fn arreter_capture() -> Option<String> {
+    TAMPON_CAPTURE.lock().take()
 }
 
 pub fn clear_screen() {
@@ -222,5 +236,17 @@ macro_rules! println {
 #[doc(hidden)]
 pub fn _print(args: fmt::Arguments) {
     use core::fmt::Write;
-    ECRIVAIN.lock().write_fmt(args).unwrap();
+    use x86_64::instructions::interrupts;
+
+    // Évite les interblocages avec les interruptions
+    interrupts::without_interrupts(|| {
+        let mut capture = TAMPON_CAPTURE.lock();
+        if let Some(ref mut buffer_texte) = *capture {
+            // Le flux est détourné vers le tampon mémoire
+            let _ = buffer_texte.write_fmt(args);
+        } else {
+            // Pas de redirection : affichage standard sur l'écran VGA
+            ECRIVAIN.lock().write_fmt(args).unwrap();
+        }
+    });
 }
