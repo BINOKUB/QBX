@@ -30,16 +30,6 @@ use pc_keyboard::{Keyboard, ScancodeSet1, layouts, HandleControl};
 use spin::Mutex;
 use lazy_static::lazy_static;
 
-// Tâche d'arrière-plan de démonstration pour le multitâche coopératif
-fn tache_demo() {
-    crate::klog!("[TSK] Tâche témoin démarrée (Étape 1/3)");
-    task::ceder();
-    crate::klog!("[TSK] Tâche témoin reprise (Étape 2/3)");
-    task::ceder();
-    crate::klog!("[TSK] Tâche témoin reprise (Étape 3/3)");
-    task::ceder();
-    crate::klog!("[TSK] Tâche témoin achevée");
-}
 
 // Définition de la fonction d'entrée appelée par le bootloader
 entry_point!(kernel_main);
@@ -111,9 +101,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
    // 5. Initialisation du sous-système multitâche (Enregistre le thread principal comme Tâche 0)
     task::initialiser();
 
-    // Enregistrement de la tâche témoin dans la file coopérative
-    task::creer_tache(tache_demo);
-
+   
     // 6. Journalisation des événements d'amorçage
     crate::klog!("[KRN] QBX Microkernel v0.1 démarre");
     crate::klog!("[CPU] Initialisation IDT et PIC terminée, interruptions activées");

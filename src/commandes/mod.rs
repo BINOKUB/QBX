@@ -19,3 +19,4 @@ pub mod dpc;
 pub mod afn;
 pub mod mmr;
 pub mod ver;
+pub mod tsk;

@@ -14,7 +14,7 @@ pub fn executer(commande: &str) {
         println!("Usage : mnl <commande>");
         println!("Commandes disponibles :");
         println!("  ntr, inf, tmps, edt, ls, cat, ctr, cdr, spp, rnm,");
-        println!("  cpr, dpc, afn, mmr, ver, tpf, mnl, qtr");
+        println!("  cpr, dpc, afn, mmr, ver, tpf, tsk, mnl, qtr");
         return;
     }
 
@@ -51,6 +51,18 @@ pub fn executer(commande: &str) {
             println!("     Interroge le composant RTC (Real Time Clock) via les ports I/O");
             println!("     pour afficher l'heure actuelle du système.\n");
             println!("QBX v0.1.0                      Révision 0.1                     TMPS(1)");
+        }
+            "tsk" => {
+            println!("TSK(1)                      Manuel de référence QBX                      TSK(1)\n");
+            println!("NOM");
+            println!("     tsk - Lister les tâches et processus du noyau\n");
+            println!("SYNOPSIS");
+            println!("     tsk\n");
+            println!("DESCRIPTION");
+            println!("     Interroge l'ordonnanceur coopératif pour afficher la table");
+            println!("     des tâches enregistrées, incluant l'identifiant (TID),");
+            println!("     l'état d'exécution (ACTIF, PRÊT, TERMINÉ) et le nom assigné.\n");
+            println!("QBX v0.1.0                      Révision 0.1                      TSK(1)");
         }
         "edt" => {
             let texte_manuel = "EDT(1)                      Manuel de référence QBX                      EDT(1)\n\

@@ -253,6 +253,9 @@ impl Shell {
                     core::ptr::write_volatile(ptr, 42);
                 }
             }
+            "tsk" => {
+                commandes::tsk::executer();
+            }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");
@@ -275,6 +278,7 @@ impl Shell {
                 println!("  mmr  : Afficher les statistiques ou étendre le tas (ex: mmr, mmr -e)");
                 println!("  ver  : Informations système et version (ex: ver, ver -a, ver -r)");
                 println!("  tpf  : Déclencher un Page Fault de test (#PF sur 0xdeadbeef)");
+                println!("  tsk  : Lister les tâches et processus actifs");
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);

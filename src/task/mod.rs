@@ -1,6 +1,6 @@
-// QBX Core - Révision 0.2
+// QBX Core - Révision 0.3
 // Fichier : src/task/mod.rs
-// Description : Ordonnanceur coopératif Round-Robin et gestionnaire de tâches noyau
+// Description : Ordonnanceur coopératif Round-Robin, descripteur de tâche avec nommage et API d'inspection
 
 pub mod context;
 
@@ -22,28 +22,30 @@ pub enum EtatTache {
     Terminee,
 }
 
+pub struct InfoTache {
+    pub id: usize,
+    pub nom: &'static str,
+    pub etat: EtatTache,
+}
+
 pub struct Tache {
     pub id: TaskId,
+    pub nom: &'static str,
     pub etat: EtatTache,
     pub contexte: ContexteTache,
-    // Conserve le tampon de pile alloué sur le tas jusqu'à la destruction de la tâche
     #[allow(dead_code)]
     pile: Option<Vec<u8>>,
 }
 
 impl Tache {
-    pub fn nouvelle(id: TaskId, point_entree: fn()) -> Self {
+    pub fn nouvelle(id: TaskId, nom: &'static str, point_entree: fn()) -> Self {
         let pile = alloc::vec![0u8; TAILLE_PILE];
         let fin_pile = pile.as_ptr() as usize + TAILLE_PILE;
 
-        // Alignement strict de la pile sur frontière de 16 octets selon l'ABI AMD64
         let mut sommet = fin_pile & !0xF;
-
-        // Réserve un cran pour conserver l'alignement (rsp + 8) % 16 == 0 à l'entrée de fonction
+        sommet -= 8;
         sommet -= 8;
 
-        // Place l'adresse de saut du 'ret' initial vers le trampoline
-        sommet -= 8;
         unsafe {
             let ptr_ret = sommet as *mut usize;
             *ptr_ret = trampoline_tache as *const () as usize;
@@ -55,6 +57,7 @@ impl Tache {
 
         Tache {
             id,
+            nom,
             etat: EtatTache::Prete,
             contexte,
             pile: Some(pile),
@@ -62,7 +65,6 @@ impl Tache {
     }
 }
 
-// Trampoline d'entrée et de fin propre de tâche
 extern "C" fn trampoline_tache() -> ! {
     let point_entree: fn();
     unsafe {
@@ -97,11 +99,12 @@ impl Ordonnanceur {
 
 pub static ORDONNANCEUR: Mutex<Ordonnanceur> = Mutex::new(Ordonnanceur::new());
 
-/// Initialise l'ordonnanceur en enregistrant le thread principal actuel comme Tâche 0
+/// Initialise l'ordonnanceur en enregistrant le thread principal comme Tâche 0 ("noyau")
 pub fn initialiser() {
     let mut ord = ORDONNANCEUR.lock();
     let tache_principale = Box::new(Tache {
         id: TaskId(0),
+        nom: "noyau",
         etat: EtatTache::EnCours,
         contexte: ContexteTache::default(),
         pile: None,
@@ -110,25 +113,47 @@ pub fn initialiser() {
     crate::klog!("[TSK] Ordonnanceur cooperatif initialise (Tache 0 active)");
 }
 
-/// Enregistre et place une nouvelle tâche dans la file d'attente
-pub fn creer_tache(point_entree: fn()) -> TaskId {
+/// Enregistre et place une nouvelle tâche nommée dans la file d'attente
+pub fn creer_tache(nom: &'static str, point_entree: fn()) -> TaskId {
     let mut ord = ORDONNANCEUR.lock();
     let id = TaskId(ord.prochain_id);
     ord.prochain_id += 1;
 
-    let nouvelle = Box::new(Tache::nouvelle(id, point_entree));
+    let nouvelle = Box::new(Tache::nouvelle(id, nom, point_entree));
     ord.taches.push_back(nouvelle);
 
-    crate::klog!("[TSK] Tache {} creee et placee en file prete", id.0);
+    crate::klog!("[TSK] Tache {} ({}) creee et placee en file prete", id.0, nom);
     id
 }
 
-/// Cède volontairement le processeur à la tâche suivante dans la file
+/// Extrait une photographie de l'état actuel de toutes les tâches pour inspection
+pub fn lister_taches() -> Vec<InfoTache> {
+    let ord = ORDONNANCEUR.lock();
+    let mut liste = Vec::new();
+
+    if let Some(ref courante) = ord.courante {
+        liste.push(InfoTache {
+            id: courante.id.0,
+            nom: courante.nom,
+            etat: courante.etat,
+        });
+    }
+
+    for t in &ord.taches {
+        liste.push(InfoTache {
+            id: t.id.0,
+            nom: t.nom,
+            etat: t.etat,
+        });
+    }
+
+    liste.sort_by_key(|t| t.id);
+    liste
+}
+
 pub fn ceder() {
     let (ancien_ptr, nouveau_ptr) = {
         let mut ord = ORDONNANCEUR.lock();
-
-        // Libère les piles des tâches terminées lors du tour précédent
         ord.zombies.clear();
 
         if ord.taches.is_empty() {
