@@ -1,6 +1,6 @@
-// QBX Commande - Révision 0.8
+// QBX Commande - Révision 0.9
 // Fichier : src/commandes/mnl.rs
-// Description : Manuel du système QBX avec support du pager modulaire et couverture complète des utilitaires
+// Description : Manuel du système QBX avec support du pager modulaire et couverture des outils de diagnostic mémoire
 
 use crate::println;
 use crate::commandes::pager;
@@ -14,7 +14,7 @@ pub fn executer(commande: &str) {
         println!("Usage : mnl <commande>");
         println!("Commandes disponibles :");
         println!("  ntr, inf, tmps, edt, ls, cat, ctr, cdr, spp, rnm,");
-        println!("  cpr, dpc, afn, mmr, ver, mnl, qtr");
+        println!("  cpr, dpc, afn, mmr, ver, tpf, mnl, qtr");
         return;
     }
 
@@ -193,9 +193,9 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
         "mmr" => {
             println!("MMR(1)                      Manuel de référence QBX                      MMR(1)\n");
             println!("NOM");
-            println!("     mmr - Statistiques de la mémoire vive (Heap)\n");
+            println!("     mmr - Statistiques et gestion de la mémoire vive (Heap)\n");
             println!("SYNOPSIS");
-            println!("     mmr\n");
+            println!("     mmr [-e | -t | -c]\n");
             println!("DESCRIPTION");
             println!("     Interroge l'allocateur global du noyau pour afficher l'état");
             println!("     en temps réel du tas (Heap) de QBX :");
@@ -203,7 +203,14 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("       - Capacité totale configurée");
             println!("       - Espace actuellement consommé et pourcentage");
             println!("       - Espace mémoire libre disponible\n");
-            println!("QBX v0.1.0                      Révision 0.1                      MMR(1)");
+            println!("OPTIONS");
+            println!("     -e      Alloue et mappe manuellement 1 Mio (1024 Ko) de pages");
+            println!("             physiques supplémentaires pour agrandir le tas.");
+            println!("     -t      Épreuve de saturation progressive par blocs de 64 Ko");
+            println!("             pour contraindre la mémoire sous le seuil critique (< 256 Ko).");
+            println!("     -c      Libère intégralement les blocs de l'épreuve de saturation");
+            println!("             (-t) et restitue l'espace au tas.\n");
+            println!("QBX v0.1.0                      Révision 0.3                      MMR(1)");
         }
         "ver" => {
             println!("VER(1)                      Manuel de référence QBX                      VER(1)\n");
@@ -222,6 +229,19 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("     -v      Affiche la description interne du noyau.");
             println!("     -m, -p  Affiche l'architecture matérielle cible (x86_64).\n");
             println!("QBX v0.1.0                      Révision 0.1                      VER(1)");
+        }
+        "tpf" => {
+            println!("TPF(1)                      Manuel de référence QBX                      TPF(1)\n");
+            println!("NOM");
+            println!("     tpf - Test de défaut de page (Page Fault #PF)\n");
+            println!("SYNOPSIS");
+            println!("     tpf\n");
+            println!("DESCRIPTION");
+            println!("     Déclenche délibérément une violation d'accès mémoire par écriture");
+            println!("     volatile sur une adresse virtuelle non mappée (0xdeadbeef).");
+            println!("     Permet de valider l'interception matérielle par l'interruption 14 (#PF),");
+            println!("     la lecture exacte du registre CR2 et la prévention du triple fault.\n");
+            println!("QBX v0.1.0                      Révision 0.1                      TPF(1)");
         }
         "mnl" => {
             println!("MNL(1)                      Manuel de référence QBX                      MNL(1)\n");
@@ -243,24 +263,6 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("     Arrête proprement le noyau QBX en envoyant un signal de");
             println!("     coupure d'alimentation sur les ports ACPI/APM.\n");
             println!("QBX v0.1.0                      Révision 0.1                      QTR(1)");
-        }
-            "mmr" => {
-            println!("MMR(1)                      Manuel de référence QBX                      MMR(1)\n");
-            println!("NOM");
-            println!("     mmr - Statistiques et gestion de la mémoire vive (Heap)\n");
-            println!("SYNOPSIS");
-            println!("     mmr [-e]\n");
-            println!("DESCRIPTION");
-            println!("     Interroge l'allocateur global du noyau pour afficher l'état");
-            println!("     en temps réel du tas (Heap) de QBX :");
-            println!("       - Plage d'adresses virtuelles allouée");
-            println!("       - Capacité totale configurée");
-            println!("       - Espace actuellement consommé et pourcentage");
-            println!("       - Espace mémoire libre disponible\n");
-            println!("OPTIONS");
-            println!("     -e      Alloue et mappe dynamiquement 1 Mio (1024 Ko) de pages");
-            println!("             physiques supplémentaires pour agrandir le tas.\n");
-            println!("QBX v0.1.0                      Révision 0.2                      MMR(1)");
         }
         inconnu => {
             println!("Aucune page de manuel pour : {}", inconnu);
