@@ -17,7 +17,7 @@ mod clavier_queue;
 pub mod fs;
 pub mod allocator;
 pub mod memory;
-// mod ops;
+pub mod journal;
 
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
@@ -64,14 +64,13 @@ fn synchroniser_caps_lock() {
 // --- [FONCTION 3 : kernel_main] ---
 // Description : Point d'entrée principal du noyau.
 fn kernel_main(boot_info: &'static BootInfo) -> ! {
-            println!("  ____  ____  __  __");
-            println!(" / __ \\|  _ \\ \\ \\/ /");
-            println!("| |  | | |_) ) >  < ");
-            println!("| |__| |  _ < / /\\ \\");
-            println!(" \\___\\_\\____//_/  \\_\\");
-            println!("=== QBX - EXP (Québec UNIX) v0.1 ===");
-            println!("Initialisation du système...\n");
-           
+    println!("  ____  ____  __  __");
+    println!(" / __ \\|  _ \\ \\ \\/ /");
+    println!("| |  | | |_) ) >  < ");
+    println!("| |__| |  _ < / /\\ \\");
+    println!(" \\___\\_\\____//_/  \\_\\");
+    println!("=== QBX - EXP (Québec UNIX) v0.1 ===");
+    println!("Initialisation du système...\n");
 
     interrupts::init_idt();
     unsafe { interrupts::PICS.lock().initialize() };
@@ -86,6 +85,15 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     }
 
     println!("Heap 2 MiB : OK");
+
+    // --- Journalisation des événements d'amorçage du noyau ---
+    crate::klog!("[KRN] QBX Microkernel v0.1 démarre");
+    crate::klog!("[CPU] Initialisation IDT et PIC terminée, interruptions activées");
+    crate::klog!("[MEM] Pagination physique et virtuelle initialisée");
+    crate::klog!("[ALC] Heap de 2 MiB initialisé avec succès");
+    crate::klog!("[VFS] Système de fichiers en mémoire monté sur '/'");
+    crate::klog!("[SHL] Shell interactif initialisé");
+
     println!("Système prêt.\n");
     print!("qbx:{}> ", fs::chemin_actuel()); // <-- Le prompt corrigé est bien placé ici
 

@@ -206,6 +206,9 @@ impl Shell {
                 let args_vec: alloc::vec::Vec<&str> = reste_args.split_whitespace().collect();
                 commandes::dpc::executer(&args_vec);
             }
+            "afn" => {
+                commandes::afn::executer();
+            }
             "aide" => {
                 println!("Lexique des commandes QBX :");
                 println!("  ntr  : Nettoyer l'écran");
@@ -222,6 +225,7 @@ impl Shell {
                 println!("  rnm  : Renommer (ex: rnm f1.txt f2.txt, rnm -r rep1 rep2)");
                 println!("  cpr  : Copier un fichier ou répertoire (ex: cpr f1.txt f2.txt, cpr -r rep1 rep2)");
                 println!("  dpc  : Deplacer un fichier ou repertoire (ex: dpc f1.txt rep/)");
+                println!("  afn  : Afficher les messages et informations du noyau");
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);

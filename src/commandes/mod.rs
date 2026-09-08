@@ -16,3 +16,4 @@ pub mod spp;
 pub mod rnm;
 pub mod cpr;
 pub mod dpc;
+pub mod afn;
