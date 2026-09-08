@@ -20,3 +20,4 @@ pub mod afn;
 pub mod mmr;
 pub mod ver;
 pub mod tsk;
+pub mod pci;

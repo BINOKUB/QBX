@@ -365,11 +365,15 @@ impl Shell {
                     core::ptr::write_volatile(ptr, 42);
                 }
             }
+            "pci" => {
+                commandes::pci::executer();
+            }
             "aide" => {
                 println!("Commandes QBX :");
                 println!("  su       : Élévation de privilèges (su -adm, su -arc, su -d)");
                 println!("  exit     : Rétrograder au mode Opérateur");
                 println!("  tsk      : Lister les processus actifs");
+                println!("  pci      : Auditer les périphériques du bus matériel");
                 println!("  mmr      : Statistiques mémoire (-e/-t/-c réservés Architecte)");
                 println!("  afn      : Journal d'audit et messages noyau");
                 println!("  mnl      : Manuel système");

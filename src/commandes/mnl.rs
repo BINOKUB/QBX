@@ -14,7 +14,7 @@ pub fn executer(commande: &str) {
         println!("Usage : mnl <commande>");
         println!("Commandes disponibles :");
         println!("  ntr, inf, tmps, edt, ls, cat, ctr, cdr, spp, rnm,");
-        println!("  cpr, dpc, afn, mmr, ver, tpf, tsk, mnl, qtr");
+        println!("  cpr, dpc, afn, mmr, ver, tpf, tsk, mnl, qtr, pci");
         return;
     }
 
@@ -82,6 +82,19 @@ pub fn executer(commande: &str) {
             println!("     -arc    Élévation au palier Architecte.");
             println!("     -d      Rétrogradation immédiate d'un palier (identique à exit).\n");
             println!("QBX v0.1.0                      Révision 0.1                       SU(1)");
+        }
+            "pci" => {
+            println!("PCI(1)                      Manuel de référence QBX                      PCI(1)\n");
+            println!("NOM");
+            println!("     pci - Inspection des périphériques connectés au bus matériel\n");
+            println!("SYNOPSIS");
+            println!("     pci\n");
+            println!("DESCRIPTION");
+            println!("     Interroge le bus PCI via les registres d'E/S 0xCF8 et 0xCFC.");
+            println!("     Affiche la topologie matérielle (Bus, Périphérique, Fonction),");
+            println!("     l'identifiant constructeur (Vendor ID), le produit (Device ID),");
+            println!("     l'adresse de base mémoire (BAR0) et cible les interfaces réseau.\n");
+            println!("QBX v0.1.0                      Révision 0.1                       PCI(1)");
         }
         "edt" => {
             let texte_manuel = "EDT(1)                      Manuel de référence QBX                      EDT(1)\n\

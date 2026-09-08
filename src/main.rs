@@ -21,6 +21,7 @@ pub mod memory;
 pub mod journal;
 pub mod task;
 pub mod session;
+pub mod pci;
 
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
@@ -89,7 +90,10 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     // 5. Initialisation du sous-système multitâche (Tâche 0 noyau)
     task::initialiser();
 
-    // 6. Journalisation des étapes d'initialisation
+// 6.0 Détection matérielle PCI et repérage de l'interface réseau
+    pci::initialiser();
+
+    // 6.1 Journalisation des étapes d'initialisation
     crate::klog!("[KRN] QBX Microkernel v0.1 démarre");
     crate::klog!("[CPU] Initialisation IDT et PIC terminée");
     crate::klog!("[MEM] Pagination physique et virtuelle initialisée");
