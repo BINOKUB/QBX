@@ -368,6 +368,12 @@ impl Shell {
             "pci" => {
                 commandes::pci::executer();
             }
+            "net" => {
+                commandes::net::executer();
+            }
+            "snf" => {
+                commandes::snf::executer();
+            }
             "aide" => {
                 println!("Commandes QBX :");
                 println!("  su       : Élévation de privilèges (su -adm, su -arc, su -d)");
@@ -377,6 +383,9 @@ impl Shell {
                 println!("  mmr      : Statistiques mémoire (-e/-t/-c réservés Architecte)");
                 println!("  afn      : Journal d'audit et messages noyau");
                 println!("  mnl      : Manuel système");
+                println!("  pci      : Auditer les périphériques du bus matériel");
+                println!("  net      : Statut de l'interface réseau et adresse MAC");
+                println!("  snf      : Interception de trames réseau (mode Promiscuous)");
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);

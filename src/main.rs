@@ -22,6 +22,7 @@ pub mod journal;
 pub mod task;
 pub mod session;
 pub mod pci;
+pub mod net;
 
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
@@ -75,6 +76,7 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
     // 2. Initialisation pagination physique et virtuelle
     let phys_mem_offset = VirtAddr::new(boot_info.physical_memory_offset);
+    memory::enregistrer_offset_physique(boot_info.physical_memory_offset);
     let mut mapper = unsafe { memory::init(phys_mem_offset) };
     let mut frame_allocator = unsafe { BootInfoFrameAllocator::init(&boot_info.memory_map) };
 
@@ -92,6 +94,9 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
 
 // 6.0 Détection matérielle PCI et repérage de l'interface réseau
     pci::initialiser();
+
+// 7. Initialisation du contrôleur réseau
+    net::initialiser();
 
     // 6.1 Journalisation des étapes d'initialisation
     crate::klog!("[KRN] QBX Microkernel v0.1 démarre");

@@ -119,3 +119,35 @@ pub fn initialiser() {
         crate::klog!("[NET] Aucune interface Intel e1000 reperee");
     }
 }
+
+/// Écrit un mot de 32 bits dans l'espace de configuration PCI
+pub fn ecrire_config_u32(bus: u8, slot: u8, fonction: u8, decalage: u8, valeur: u32) {
+    let adresse = 0x8000_0000u32
+        | ((bus as u32) << 16)
+        | ((slot as u32) << 11)
+        | ((fonction as u32) << 8)
+        | ((decalage as u32) & 0xFC);
+
+    unsafe {
+        let mut port_adr = Port::new(PCI_CONFIG_ADDRESS);
+        let mut port_data = Port::new(PCI_CONFIG_DATA);
+        port_adr.write(adresse);
+        port_data.write(valeur);
+    }
+}
+
+/// Écrit un mot de 16 bits sans altérer les octets adjacents
+pub fn ecrire_config_u16(bus: u8, slot: u8, fonction: u8, decalage: u8, valeur: u16) {
+    let ancien = lire_config_u32(bus, slot, fonction, decalage);
+    let shift = (decalage & 2) * 8;
+    let masque = !(0xFFFFu32 << shift);
+    let nouveau = (ancien & masque) | ((valeur as u32) << shift);
+    ecrire_config_u32(bus, slot, fonction, decalage, nouveau);
+}
+
+/// Active le Bus Mastering (DMA) et l'accès à l'espace mémoire (MMIO) sur le périphérique
+pub fn activer_bus_master_et_memoire(bus: u8, slot: u8, fonction: u8) {
+    let cmd = lire_config_u16(bus, slot, fonction, 0x04);
+    // Bit 1 = Memory Space Enable, Bit 2 = Bus Master Enable
+    ecrire_config_u16(bus, slot, fonction, 0x04, cmd | 0x0006);
+}

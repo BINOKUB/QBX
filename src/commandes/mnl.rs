@@ -96,6 +96,18 @@ pub fn executer(commande: &str) {
             println!("     l'adresse de base mémoire (BAR0) et cible les interfaces réseau.\n");
             println!("QBX v0.1.0                      Révision 0.1                       PCI(1)");
         }
+            "snf" => {
+            println!("SNF(1)                      Manuel de référence QBX                      SNF(1)\n");
+            println!("NOM");
+            println!("     snf - Sonde de surveillance et d'interception réseau\n");
+            println!("SYNOPSIS");
+            println!("     snf\n");
+            println!("DESCRIPTION");
+            println!("     Active l'écoute des descripteurs DMA matériels de l'e1000.");
+            println!("     Grâce au mode Promiscuous (UPE/MPE), capture et décode l'ensemble");
+            println!("     des trames Ethernet (ARP, IPv4, IPv6) transitant sur le segment.\n");
+            println!("QBX v0.1.0                      Révision 0.1                       SNF(1)");
+        }
         "edt" => {
             let texte_manuel = "EDT(1)                      Manuel de référence QBX                      EDT(1)\n\
 \n\

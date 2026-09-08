@@ -21,3 +21,5 @@ pub mod mmr;
 pub mod ver;
 pub mod tsk;
 pub mod pci;
+pub mod net;
+pub mod snf;
