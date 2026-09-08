@@ -14,3 +14,4 @@ pub mod ctr;
 pub mod cdr;
 pub mod spp;
 pub mod rnm;
+pub mod cpr;

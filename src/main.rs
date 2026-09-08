@@ -17,6 +17,7 @@ mod clavier_queue;
 pub mod fs;
 pub mod allocator;
 pub mod memory;
+// mod ops;
 
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;

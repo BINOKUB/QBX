@@ -23,6 +23,10 @@ impl Horodatage {
     }
 }
 
+
+#[derive(Clone)]
+
+
 pub enum Node {
     File {
         data: Vec<u8>,

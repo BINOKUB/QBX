@@ -169,6 +169,11 @@ impl Shell {
             "tmps" => {
                 commandes::tmps::executer();
             }
+            "cpr" => {
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                let args_vec: alloc::vec::Vec<&str> = reste_args.split_whitespace().collect();
+                commandes::cpr::executer(&args_vec);
+            }
             "edt" => {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 commandes::edt::executer(reste_args);
@@ -210,6 +215,7 @@ impl Shell {
                 println!("  mnl  : Manuel système (ex: mnl edt)");
                 println!("  qtr  : Quitter le système");
                 println!("  rnm  : Renommer (ex: rnm f1.txt f2.txt, rnm -r rep1 rep2)");
+                println!("  cpr  : Copier un fichier ou répertoire (ex: cpr f1.txt f2.txt, cpr -r rep1 rep2)");
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);

@@ -1,15 +1,17 @@
-// QBX FileSystem Module - Révision 0.5
+// QBX FileSystem Module - Révision 0.6
 // Fichier : src/fs/mod.rs
-// Description : Façade centrale du VFS avec gestion dynamique du CWD, suppression, renommage et horodatage RTC
+// Description : Façade centrale du VFS avec gestion dynamique du CWD, copie, suppression, renommage et RTC
 
 pub mod node;
 pub mod path;
+pub mod ops;
 
 use alloc::string::String;
 use alloc::vec::Vec;
 use alloc::collections::BTreeMap;
 use spin::Mutex;
 use node::{Node, Horodatage};
+pub use ops::VfsError;
 
 pub struct FileSystem {
     root: Node,
@@ -30,6 +32,25 @@ impl FileSystem {
     fn date_actuelle() -> Horodatage {
         let (h, m, s) = crate::commandes::tmps::obtenir_heure_actuelle();
         Horodatage::new(h, m, s)
+    }
+
+    /// Résout un chemin relatif ou absolu en une liste canonique d'éléments.
+    pub fn resoudre_chemin(&self, chemin: &str) -> Vec<String> {
+        let elements = path::nettoyer_chemin(chemin);
+        let mut resultat = if path::est_absolu(chemin) {
+            Vec::new()
+        } else {
+            self.cwd.clone()
+        };
+
+        for elem in elements {
+            if elem == ".." {
+                resultat.pop();
+            } else {
+                resultat.push(elem);
+            }
+        }
+        resultat
     }
 
     pub fn ecrire(&mut self, nom: &str, donnees: Vec<u8>) -> bool {
@@ -82,23 +103,9 @@ impl FileSystem {
     }
 
     pub fn changer_repertoire(&mut self, chemin: &str) -> bool {
-        let elements = path::nettoyer_chemin(chemin);
-        
-        let mut cible = if path::est_absolu(chemin) {
-            Vec::new()
-        } else {
-            self.cwd.clone()
-        };
+        let cible = self.resoudre_chemin(chemin);
 
-        for elem in elements {
-            if elem == ".." {
-                cible.pop();
-            } else {
-                cible.push(elem);
-            }
-        }
-
-        if self.acceder_noeud(&cible).is_some() {
+        if let Some(Node::Directory { .. }) = self.acceder_noeud(&cible) {
             self.cwd = cible;
             return true;
         }
@@ -207,6 +214,58 @@ impl FileSystem {
         }
         Err("erreur_fs")
     }
+
+    /// Copie un fichier ou un répertoire avec gestion des options récursives et détection de cycle.
+    pub fn copier(&mut self, source_str: &str, cible_str: &str, recursif: bool) -> Result<(), VfsError> {
+        let chemin_src = self.resoudre_chemin(source_str);
+        if chemin_src.is_empty() {
+            return Err(VfsError::SourceIntrouvable);
+        }
+
+        // 1. Cloner le nœud source
+        let (noeud_a_copier, nom_source) = {
+            let noeud = self.acceder_noeud(&chemin_src).ok_or(VfsError::SourceIntrouvable)?;
+            if noeud.est_un_dossier() && !recursif {
+                return Err(VfsError::EstUnRepertoire);
+            }
+            let nom = chemin_src.last().unwrap().clone();
+            (noeud.clone(), nom)
+        };
+
+        // 2. Déterminer le chemin cible absolu
+        let mut chemin_dst = self.resoudre_chemin(cible_str);
+
+        // Si la destination existe et est un répertoire : on copie dedans
+        if let Some(Node::Directory { .. }) = self.acceder_noeud(&chemin_dst) {
+            chemin_dst.push(nom_source);
+        }
+
+        // 3. Empêcher la récursion cyclique (ex: copier /a dans /a/b)
+        if noeud_a_copier.est_un_dossier() && ops::est_descendant(&chemin_src, &chemin_dst) {
+            return Err(VfsError::CycleDetecte);
+        }
+
+        // 4. Vérifier que la destination n'existe pas déjà
+        if self.acceder_noeud(&chemin_dst).is_some() {
+            return Err(VfsError::CibleExisteDeja);
+        }
+
+        // 5. Insérer le nœud dans le dossier parent de la cible
+        let (dossier_parent_dst, nom_final) = if chemin_dst.len() == 1 {
+            (Vec::new(), chemin_dst[0].clone())
+        } else if let Some((nom, parent)) = chemin_dst.split_last() {
+            (parent.to_vec(), nom.clone())
+        } else {
+            return Err(VfsError::CheminInvalide);
+        };
+
+        if let Some(Node::Directory { children, .. }) = self.acceder_noeud_mut(&dossier_parent_dst) {
+            children.insert(nom_final, noeud_a_copier);
+            Ok(())
+        } else {
+            Err(VfsError::DestinationIntrouvable)
+        }
+    }
 }
 
 pub static SYSTEME_FICHIERS: Mutex<FileSystem> = Mutex::new(FileSystem::new());
@@ -233,4 +292,8 @@ pub fn supprimer(nom: &str, dossier_attendu: bool) -> Result<(), &'static str> {
 
 pub fn renommer(ancien: &str, nouveau: &str, dossier_attendu: bool) -> Result<(), &'static str> {
     SYSTEME_FICHIERS.lock().renommer(ancien, nouveau, dossier_attendu)
+}
+
+pub fn copier(source: &str, cible: &str, recursif: bool) -> Result<(), VfsError> {
+    SYSTEME_FICHIERS.lock().copier(source, cible, recursif)
 }
