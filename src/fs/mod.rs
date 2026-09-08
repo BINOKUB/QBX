@@ -266,6 +266,79 @@ impl FileSystem {
             Err(VfsError::DestinationIntrouvable)
         }
     }
+
+/// Déplace un fichier ou un répertoire vers une nouvelle cible.
+    /// Ne duplique pas les données en mémoire, déplace directement le nœud.
+    pub fn deplacer(&mut self, source_str: &str, cible_str: &str) -> Result<(), VfsError> {
+        let chemin_src = self.resoudre_chemin(source_str);
+        if chemin_src.is_empty() {
+            return Err(VfsError::SourceIntrouvable);
+        }
+
+        // Vérifier l'existence et déterminer s'il s'agit d'un dossier
+        let est_dossier = {
+            let noeud = self.acceder_noeud(&chemin_src).ok_or(VfsError::SourceIntrouvable)?;
+            noeud.est_un_dossier()
+        };
+
+        let nom_source = chemin_src.last().unwrap().clone();
+
+        // Résoudre la cible
+        let mut chemin_dst = self.resoudre_chemin(cible_str);
+
+        // Si la destination existe et est un répertoire, déplacer à l'intérieur
+        if let Some(Node::Directory { .. }) = self.acceder_noeud(&chemin_dst) {
+            chemin_dst.push(nom_source.clone());
+        }
+
+        // Empêcher de déplacer un répertoire dans lui-même ou l'un de ses descendants
+        if est_dossier && ops::est_descendant(&chemin_src, &chemin_dst) {
+            return Err(VfsError::CycleDetecte);
+        }
+
+        // Vérifier que la destination finale n'existe pas déjà
+        if self.acceder_noeud(&chemin_dst).is_some() {
+            return Err(VfsError::CibleExisteDeja);
+        }
+
+        // Déterminer le parent de la cible et le nom final
+        let (dossier_parent_dst, nom_final) = if chemin_dst.len() == 1 {
+            (Vec::new(), chemin_dst[0].clone())
+        } else if let Some((nom, parent)) = chemin_dst.split_last() {
+            (parent.to_vec(), nom.clone())
+        } else {
+            return Err(VfsError::CheminInvalide);
+        };
+
+        // Vérifier que le répertoire parent de destination existe
+        if self.acceder_noeud(&dossier_parent_dst).is_none() {
+            return Err(VfsError::DestinationIntrouvable);
+        }
+
+        // Retirer le nœud de son parent source
+        let (dossier_parent_src, nom_src_element) = if chemin_src.len() == 1 {
+            (Vec::new(), chemin_src[0].clone())
+        } else if let Some((nom, parent)) = chemin_src.split_last() {
+            (parent.to_vec(), nom.clone())
+        } else {
+            return Err(VfsError::CheminInvalide);
+        };
+
+        let noeud_extrait = if let Some(Node::Directory { children, .. }) = self.acceder_noeud_mut(&dossier_parent_src) {
+            children.remove(&nom_src_element).ok_or(VfsError::SourceIntrouvable)?
+        } else {
+            return Err(VfsError::SourceIntrouvable);
+        };
+
+        // Insérer le nœud à sa nouvelle destination
+        if let Some(Node::Directory { children, .. }) = self.acceder_noeud_mut(&dossier_parent_dst) {
+            children.insert(nom_final, noeud_extrait);
+            Ok(())
+        } else {
+            Err(VfsError::DestinationIntrouvable)
+        }
+    }
+
 }
 
 pub static SYSTEME_FICHIERS: Mutex<FileSystem> = Mutex::new(FileSystem::new());
@@ -296,4 +369,8 @@ pub fn renommer(ancien: &str, nouveau: &str, dossier_attendu: bool) -> Result<()
 
 pub fn copier(source: &str, cible: &str, recursif: bool) -> Result<(), VfsError> {
     SYSTEME_FICHIERS.lock().copier(source, cible, recursif)
+}
+
+pub fn deplacer(source: &str, cible: &str) -> Result<(), VfsError> {
+    SYSTEME_FICHIERS.lock().deplacer(source, cible)
 }
