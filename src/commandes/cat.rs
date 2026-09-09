@@ -1,12 +1,21 @@
-// QBX Commande - Révision 0.4
+// QBX Commande - Révision 0.5
 // Fichier : src/commandes/cat.rs
-// Description : Affiche le contenu d'un fichier texte du VFS avec support optionnel du pager (-ppp)
+// Description : Affiche le contenu d'un fichier avec pagination automatique (> 22 lignes écran) ou forcée (-ppp)
 
 use crate::{println, fs};
 use crate::commandes::pager;
 
+/// Calcule le nombre réel de lignes VGA (80 colonnes) occupées par le texte
+fn calculer_lignes_ecran(texte: &str) -> usize {
+    let mut total = 0;
+    for ligne in texte.lines() {
+        let len = ligne.chars().count();
+        total += if len == 0 { 1 } else { (len + 79) / 80 };
+    }
+    total
+}
+
 // --- [FONCTION 1 : executer] ---
-// Description : Analyse les arguments, recherche le fichier dans le VFS et l'imprime (avec ou sans pagination).
 pub fn executer(args: &str) {
     let mut option_ppp = false;
     let mut nom_fichier = "";
@@ -31,17 +40,21 @@ pub fn executer(args: &str) {
             println!("(Fichier vide)");
             return;
         }
-        
-        // Correction : on passe une référence &contenu au validateur UTF-8
+
         if let Ok(contenu_str) = core::str::from_utf8(&contenu) {
-            if option_ppp {
+            let lignes = calculer_lignes_ecran(contenu_str);
+
+            // Déclenchement si l'option -ppp est demandée OU si le contenu déborde de l'écran (> 20 lignes)
+            if option_ppp || lignes > 20 {
+                drop(fs_guard); // Libérer le verrou VFS avant la pause interactive
                 pager::afficher_avec_pagination(contenu_str);
             } else {
-                // Correction : on itère sur la référence (&contenu) pour extraire les octets un par un
                 for &octet in &contenu {
                     crate::print!("{}", octet as char);
                 }
-                println!();
+                if !contenu_str.ends_with('\n') {
+                    println!();
+                }
             }
         } else {
             println!("Erreur : le fichier ne contient pas de texte UTF-8 valide.");

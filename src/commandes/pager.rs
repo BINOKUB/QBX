@@ -1,20 +1,46 @@
-// QBX Pager - Révision 0.2
+// QBX Pager - Révision 0.3
 // Fichier : src/commandes/pager.rs
-// Description : Utilitaire modulaire de pagination d'écran (-ppp) avec attente clavier active via le port PS/2 (0x60)
+// Description : Téléavertisseur (pager) VGA avec lecture contrôlée du port PS/2 (0x64 / 0x60)
 
 use alloc::vec::Vec;
 use crate::{print, println};
 use x86_64::instructions::port::Port;
 
-// --- [FONCTION 1 : afficher_avec_pagination] ---
-// Description : Découpe un flux textuel et l'affiche par tranches d'écran (mode page par page) en suspendant l'affichage jusqu'à l'appui sur Espace/Entrée ou Q.
+/// Lit un scancode frais depuis le contrôleur clavier PS/2 en vérifiant le statut
+fn lire_scancode_bloquant() -> u8 {
+    let mut port_statut: Port<u8> = Port::new(0x64);
+    let mut port_donnees: Port<u8> = Port::new(0x60);
+
+    loop {
+        unsafe {
+            // Le bit 0 du port 0x64 indique si des données sont prêtes dans le buffer de sortie
+            if (port_statut.read() & 0x01) != 0 {
+                return port_donnees.read();
+            }
+        }
+        core::hint::spin_loop();
+    }
+}
+
+/// Purge tout scancode résiduel (ex: la touche Entrée ayant lancé la commande)
+fn purger_tampon_clavier() {
+    let mut port_statut: Port<u8> = Port::new(0x64);
+    let mut port_donnees: Port<u8> = Port::new(0x60);
+
+    unsafe {
+        while (port_statut.read() & 0x01) != 0 {
+            let _ = port_donnees.read();
+        }
+    }
+}
+
 pub fn afficher_avec_pagination(texte: &str) {
     let lignes: Vec<&str> = texte.lines().collect();
     let mut ligne_courante = 0;
-    let hauteur_ecran = 20;
+    let hauteur_page = 22; // 22 lignes affichées pour laisser la place au prompt sur un écran 80x25
 
     while ligne_courante < lignes.len() {
-        let fin = (ligne_courante + hauteur_ecran).min(lignes.len());
+        let fin = (ligne_courante + hauteur_page).min(lignes.len());
         for i in ligne_courante..fin {
             println!("{}", lignes[i]);
         }
@@ -22,30 +48,46 @@ pub fn afficher_avec_pagination(texte: &str) {
         ligne_courante = fin;
 
         if ligne_courante < lignes.len() {
-            print!("-- [ESPACE = Page suivante | Q = Quitter] --");
-            
-            // Boucle de scrutation active du clavier PS/2 (Port 0x60)
-            let mut port_clavier = Port::new(0x60);
+            // Purge préalable pour éviter de consommer l'Entrée du shell
+            purger_tampon_clavier();
+
+            print!("-- [ESPACE = Page suivante | ENTREE = 1 ligne | Q = Quitter] --");
+
             loop {
-                unsafe {
-                    let scancode: u8 = port_clavier.read();
-                    // Scancodes Set 1 (Make codes) :
-                    // Espace = 0x39, Entrée = 0x1C, Q = 0x10
-                    match scancode {
-                        0x39 | 0x1C => { // Espace ou Entrée -> Page suivante
-                            println!();
+                let scancode = lire_scancode_bloquant();
+
+                // Ignorer les scancodes de relâchement (break codes avec bit 7 à 1)
+                if scancode & 0x80 != 0 {
+                    continue;
+                }
+
+                match scancode {
+                    0x39 => {
+                        // ESPACE : page suivante complète
+                        println!();
+                        break;
+                    }
+                    0x1C => {
+                        // ENTREE : descend d'une seule ligne
+                        println!();
+                        if ligne_courante < lignes.len() {
+                            println!("{}", lignes[ligne_courante]);
+                            ligne_courante += 1;
+                        }
+                        if ligne_courante < lignes.len() {
+                            purger_tampon_clavier();
+                            print!("-- [ESPACE = Page suivante | ENTREE = 1 ligne | Q = Quitter] --");
+                            continue;
+                        } else {
                             break;
                         }
-                        0x10 => { // Q -> Quitter l'affichage en cours
-                            println!();
-                            return;
-                        }
-                        _ => {}
                     }
-                }
-                // Pause CPU pour éviter de saturer le bus I/O pendant l'attente
-                for _ in 0..10000 {
-                    core::hint::spin_loop();
+                    0x10 => {
+                        // Q : quitter immédiatement le pager
+                        println!();
+                        return;
+                    }
+                    _ => {}
                 }
             }
         }

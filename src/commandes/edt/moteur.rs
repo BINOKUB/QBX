@@ -1,6 +1,6 @@
-// QBX EDT Engine - Révision 1.7
+// QBX EDT Engine - Révision 1.8
 // Fichier : src/commandes/edt/moteur.rs
-// Description : Moteur avec buffer anonyme au démarrage, sauvegarde à la volée, navigation 2D et sélection F6.
+// Description : Moteur avec buffer anonyme au démarrage, support des chemins relatifs/absolus (64 octets), navigation 2D et sélection F6.
 
 use alloc::vec::Vec;
 use spin::Mutex;
@@ -17,7 +17,7 @@ pub struct Editeur {
     pub taille_texte: usize,
     pub ligne_debut: usize,
     pub option_l: bool,
-    pub nom_fichier: [u8; 32],
+    pub nom_fichier: [u8; 64],
     pub taille_nom: usize,
     pub actif: bool,
     pub presse_papier: Vec<u8>,
@@ -34,7 +34,7 @@ impl Editeur {
             taille_texte: 0,
             ligne_debut: 0,
             option_l: false,
-            nom_fichier: [0; 32],
+            nom_fichier: [0; 64],
             taille_nom: 0,
             actif: false,
             presse_papier: Vec::new(),
@@ -49,7 +49,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 3 : lancer] ---
-    // Description : Initialise l'éditeur. Si aucun nom n'est fourni, ouvre un espace vierge anonyme sans créer de fichier sur le disque.
+    // Description : Initialise l'éditeur. Si aucun nom n'est fourni, ouvre un espace vierge anonyme.
     pub fn lancer(&mut self, option_l: bool, nom_fichier: &str) {
         self.option_l = option_l;
         self.curseur_pos = 0;
@@ -61,14 +61,16 @@ impl Editeur {
         if nom_trim.is_empty() {
             // Espace vierge et volatile (aucun fichier par défaut créé sur le disque)
             self.taille_nom = 0;
-            self.nom_fichier = [0; 32];
+            self.nom_fichier = [0; 64];
             self.tampon = Vec::new();
             self.taille_texte = 0;
         } else {
             let bytes = nom_trim.as_bytes();
-            self.taille_nom = bytes.len().min(32);
+            self.taille_nom = bytes.len().min(64);
+            self.nom_fichier = [0; 64];
             self.nom_fichier[..self.taille_nom].copy_from_slice(&bytes[..self.taille_nom]);
 
+            // fs::lire résout automatiquement les dossiers parents via decomposer_chemin
             if let Some(contenu) = fs::lire(nom_trim) {
                 self.tampon = contenu.to_vec();
                 self.taille_texte = self.tampon.len();
@@ -98,12 +100,12 @@ impl Editeur {
     }
 
     // --- [FONCTION 6 : enregistrer] ---
-    // Description : Écrit le contenu dans le VFS. Assigne un nom par défaut si le buffer était anonyme.
+    // Description : Écrit le contenu dans le VFS via fs::ecrire (décomposition automatique du chemin).
     pub fn enregistrer(&mut self) {
         if self.taille_nom == 0 {
             let defaut = "sans_titre.txt";
             let bytes = defaut.as_bytes();
-            self.taille_nom = bytes.len().min(32);
+            self.taille_nom = bytes.len().min(64);
             self.nom_fichier[..self.taille_nom].copy_from_slice(&bytes[..self.taille_nom]);
         }
 
@@ -201,7 +203,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 10 : obtenir_limites_ligne] ---
-    // Description : Trouve l'index de début et de fin de la ligne où se trouve le curseur (mode repli).
+    // Description : Trouve l'index de début et de fin de la ligne où se trouve le curseur.
     fn obtenir_limites_ligne(&self) -> (usize, usize) {
         let mut debut = 0;
         for i in (0..self.curseur_pos).rev() {
@@ -232,7 +234,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 12 : copier_selection_ou_ligne] ---
-    // Description : Touche F3 - Copie le bloc sélectionné (F6) ou, à défaut, la ligne courante.
+    // Description : Touche F3 - Copie le bloc sélectionné (F6) ou la ligne courante.
     pub fn copier_selection_ou_ligne(&mut self) {
         self.presse_papier.clear();
         
@@ -249,7 +251,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 13 : couper_selection_ou_ligne] ---
-    // Description : Touche F4 - Coupe le bloc sélectionné (F6) ou, à défaut, la ligne courante.
+    // Description : Touche F4 - Coupe le bloc sélectionné (F6) ou la ligne courante.
     pub fn couper_selection_ou_ligne(&mut self) {
         if let Some(debut) = self.selection_debut {
             let min = debut.min(self.curseur_pos);
@@ -278,7 +280,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 14 : coller] ---
-    // Description : Touche F5 - Insère le contenu du presse-papier à la position du curseur.
+    // Description : Touche F5 - Insère le contenu du presse-papier.
     pub fn coller(&mut self) {
         if self.presse_papier.is_empty() { return; }
         
@@ -294,7 +296,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 15 : supprimer_caractere_droit] ---
-    // Description : Touche DEL (Suppr) - Supprime le caractère situé exactement sous le curseur.
+    // Description : Touche DEL (Suppr) - Supprime le caractère sous le curseur.
     pub fn supprimer_caractere_droit(&mut self) {
         if self.curseur_pos < self.taille_texte {
             self.tampon.remove(self.curseur_pos);
@@ -305,7 +307,7 @@ impl Editeur {
     }
 
     // --- [FONCTION 16 : ajuster_defilement] ---
-    // Description : Recale automatiquement la ligne de départ visible pour suivre le curseur.
+    // Description : Recale la vue pour maintenir le curseur visible.
     pub fn ajuster_defilement(&mut self) {
         let mut ligne_curseur = 0;
         let limit = self.curseur_pos.min(self.tampon.len());
@@ -323,8 +325,8 @@ impl Editeur {
         }
     }
 
-   // --- [FONCTION 17 : traiter_touche] ---
-    // Description : Analyse les touches reçues, intégrant navigation, édition, défilement et sélection F6.
+    // --- [FONCTION 17 : traiter_touche] ---
+    // Description : Analyse les touches reçues.
     pub fn traiter_touche(&mut self, key: DecodedKey) -> bool {
         match key {
             DecodedKey::RawKey(KeyCode::Escape) | DecodedKey::Unicode('\x1b') => {
@@ -370,7 +372,6 @@ impl Editeur {
         false
     }
 }
-
 
 // --- [STATIC 1 : EDITEUR] ---
 pub static EDITEUR: Mutex<Editeur> = Mutex::new(Editeur::new());

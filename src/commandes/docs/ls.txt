@@ -16,10 +16,12 @@ OPTIONS
      -l      Format long détaillant les permissions (drwxr-xr-x / -rw-r--r--),
              le nombre de liens, le propriétaire (qbx:qbx), la taille en octets,
              l'horodatage RTC et le nom de l'élément.
+    -h      Utilisé avec -l, convertit les tailles d'octets brutes en unités
+             lisibles (B, K, M).
 
 EXEMPLES
      ls
-     ls -l
+     ls -lh
      ls docs
      ls -l /var
 

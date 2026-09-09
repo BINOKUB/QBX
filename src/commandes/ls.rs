@@ -1,19 +1,58 @@
 // QBX Commande : ls (Lister)
 // Fichier : src/commandes/ls.rs
-// Description : Liste le contenu d'un répertoire (courant ou cible) en mode compact ou détaillé (-l)
+// Description : Liste le contenu d'un répertoire avec support de -l, -h et cibles arborescentes
 
 use crate::println;
+use alloc::string::String;
 use alloc::vec::Vec;
+
+fn formater_taille(octets: usize, human_readable: bool) -> String {
+    if !human_readable {
+        let mut s = String::new();
+        use core::fmt::Write;
+        let _ = write!(s, "{:>8}", octets);
+        return s;
+    }
+
+    let mut s = String::new();
+    use core::fmt::Write;
+    if octets < 1024 {
+        let _ = write!(s, "{:>7}B", octets);
+    } else if octets < 1024 * 1024 {
+        let ko = octets / 1024;
+        let frac = (octets % 1024) * 10 / 1024;
+        if ko < 10 {
+            let _ = write!(s, "{:>5}.{}K", ko, frac);
+        } else {
+            let _ = write!(s, "{:>6}K", ko);
+        }
+    } else {
+        let mo = octets / (1024 * 1024);
+        let frac = ((octets % (1024 * 1024)) * 10) / (1024 * 1024);
+        if mo < 10 {
+            let _ = write!(s, "{:>5}.{}M", mo, frac);
+        } else {
+            let _ = write!(s, "{:>6}M", mo);
+        }
+    }
+    s
+}
 
 pub fn executer(arguments: &str) {
     let tokens: Vec<&str> = arguments.split_whitespace().collect();
     let mut mode_long = false;
+    let mut human_readable = false;
     let mut chemin_cible = "";
 
     for token in tokens {
-        if token.starts_with('-') {
-            if token == "-l" || token == "-la" || token == "-al" {
-                mode_long = true;
+        if token.starts_with('-') && token.len() > 1 {
+            for c in token[1..].chars() {
+                match c {
+                    'l' => mode_long = true,
+                    'h' => human_readable = true,
+                    'a' => {} // Prévu pour les fichiers cachés
+                    _ => {}
+                }
             }
         } else if chemin_cible.is_empty() {
             chemin_cible = token;
@@ -52,12 +91,13 @@ pub fn executer(arguments: &str) {
                 ("-rw-r--r--", 1)
             };
 
-            // Format standard UNIX : [droits] [liens] [user] [group] [taille] [HH:MM:SS] [nom]
+            let str_taille = formater_taille(*taille, human_readable);
+
             println!(
-                "{} {:>2} qbx qbx {:>8} {:02}:{:02}:{:02} {}",
+                "{} {:>2} qbx qbx {} {:02}:{:02}:{:02} {}",
                 perms,
                 liens,
-                taille,
+                str_taille,
                 h.heure,
                 h.minute,
                 h.seconde,
@@ -65,7 +105,6 @@ pub fn executer(arguments: &str) {
             );
         }
     } else {
-        // Affichage compact standard
         for (nom, _taille, est_dossier, _h) in &elements {
             if *est_dossier {
                 println!("{}/", nom);
