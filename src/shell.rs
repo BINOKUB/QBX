@@ -1,8 +1,8 @@
-// QBX Shell Module - Révision 1.6
+// QBX Shell Module - Révision 1.9
 // Fichier : src/shell.rs
-// Description : Interpréteur avec historique, redirection, saisie masquée (*) et transmission d'arguments
+// Description : Interpréteur avec historique, redirection, saisie masquée (*) et intégration modulaire de l'aide
 
-use crate::{commandes, print, println, power, vga_buffer, session};
+use crate::{commandes, print, println, vga_buffer, session};
 use spin::Mutex;
 use core::iter::Iterator;
 use alloc::vec::Vec;
@@ -300,19 +300,13 @@ impl Shell {
                     println!("Session minimale (Opérateur).");
                 }
             }
-            "qtr" => {
-                if !session::verifier_privilege(session::NiveauPrivilege::Architecte) {
-                    println!("qtr: extinction réservée au niveau Architecte (EPERM)");
-                    crate::klog!("[SEC] Tentative d'extinction non autorisée");
-                    return;
-                }
-                println!("[QBX] Extinction du système...");
-                power::eteindre();
-            }
+            "qtr" => commandes::qtr::executer(),
             "ntr" => commandes::ntr::executer(),
             "mnl" => commandes::mnl::executer(argument),
             "inf" => commandes::inf::executer(),
             "tmps" => commandes::tmps::executer(),
+            "dsk" => commandes::dsk::executer(),
+            "df" => commandes::df::executer(),
             "cpr" => {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 let args_vec: Vec<&str> = reste_args.split_whitespace().collect();
@@ -358,18 +352,7 @@ impl Shell {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 commandes::ver::executer(reste_args);
             }
-            "tpf" => {
-                if !session::verifier_privilege(session::NiveauPrivilege::Architecte) {
-                    println!("tpf: opération réservée au niveau Architecte (EPERM)");
-                    crate::klog!("[SEC] Tentative non autorisée de déclenchement Page Fault");
-                    return;
-                }
-                println!("[QBX] Déclenchement volontaire d'un Page Fault sur 0xdeadbeef...");
-                let ptr = 0xdead_beef as *mut u8;
-                unsafe {
-                    core::ptr::write_volatile(ptr, 42);
-                }
-            }
+            "tpf" => commandes::tpf::executer(),
             "pci" => {
                 commandes::pci::executer();
             }
@@ -383,22 +366,16 @@ impl Shell {
                 commandes::probe::executer(args);
             }
             "aide" => {
-                println!("Commandes QBX :");
-                println!("  su       : Élévation de privilèges (su -adm, su -arc, su -d)");
-                println!("  exit     : Rétrograder au mode Opérateur");
-                println!("  tsk      : Lister les processus actifs");
-                println!("  pci      : Auditer les périphériques du bus matériel");
-                println!("  mmr      : Statistiques mémoire (-e/-t/-c réservés Architecte)");
-                println!("  afn      : Journal d'audit et messages noyau");
-                println!("  mnl      : Manuel système");
-                println!("  net      : Statut de l'interface réseau et adresse MAC");
-                println!("  snf      : Interception de trames réseau (mode Promiscuous)");
-                println!("  probe    : Sonde d'injection ARP et découverte matérielle");
+                commandes::aide::executer();
+            }
+            "echo" => {
+                let reste_args = if entree.len() > 4 { entree[4..].trim() } else { "" };
+                commandes::echo::executer(reste_args);
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);
             }
-        }
+         }
     }
 
     fn reinitialiser(&mut self) {

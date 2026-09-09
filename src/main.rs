@@ -23,6 +23,7 @@ pub mod task;
 pub mod session;
 pub mod pci;
 pub mod net;
+pub mod storage;
 
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;
@@ -89,11 +90,19 @@ fn kernel_main(boot_info: &'static BootInfo) -> ! {
     memory::init_contexte(mapper, frame_allocator);
     println!("Heap 2 MiB : OK");
 
+     
+
     // 5. Initialisation du sous-système multitâche (Tâche 0 noyau)
     task::initialiser();
 
 // 6.0 Détection matérielle PCI et repérage de l'interface réseau
     pci::initialiser();
+
+// 6.1 Initialisation du contrôleur de stockage (AHCI / SATA)
+    storage::initialiser();
+    session::charger_depuis_disque();
+    journal::charger_depuis_disque();
+    fs::charger_depuis_disque();
 
 // 7. Initialisation du contrôleur réseau
     net::initialiser();

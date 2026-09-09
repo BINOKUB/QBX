@@ -1,12 +1,15 @@
-// QBX Core - Révision 0.3
+// QBX Core - Révision 0.4
 // Fichier : src/session.rs
-// Description : RBAC, provisioning à froid (initarch/initadm), SHA-256 stack-only et purge volatile
+// Description : RBAC, provisioning à froid persistant (/sec), SHA-256 stack-only et zeroisation
 
 use spin::Mutex;
+use crate::storage::partitions;
+
+const VAULT_MAGIC: &[u8; 12] = b"QBX_VAULT_V1";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub enum NiveauPrivilege {
-    Operateur = 0,      // Prompt ">" : aucun mot de passe, outils d'analyse et surveillance
+    Operateur = 0,      // Prompt ">" : aucun mot de passe, analyse et surveillance
     Administrateur = 1, // Prompt "#" : gestion opérationnelle (su -adm)
     Architecte = 2,     // Prompt "!" : contrôle absolu du matériel et du noyau (su -arc)
 }
@@ -50,7 +53,59 @@ impl Session {
         self.hash_admin.is_some()
     }
 
-    // Scelle définitivement la clé Architecte à l'installation (une seule exécution possible)
+    // Synchronisation atomique du secteur d'authentification sur la partition /sec
+    fn synchroniser_sur_disque(&self) {
+        let mut secteur = [0u8; 512];
+        secteur[0..12].copy_from_slice(VAULT_MAGIC);
+
+        if let Some(h) = &self.hash_archi {
+            secteur[16] = 1;
+            secteur[32..64].copy_from_slice(h);
+        }
+        if let Some(h) = &self.hash_admin {
+            secteur[17] = 1;
+            secteur[64..96].copy_from_slice(h);
+        }
+
+        match partitions::ecrire_secteur_sec(0, &secteur) {
+            Ok(()) => {
+                crate::klog!("[SEC] Coffre-fort /sec synchronisé sur le disque physique");
+            }
+            Err(e) => {
+                crate::klog!("[SEC] Erreur synchronisation disque /sec : {}", e);
+            }
+        }
+        zeroiser(&mut secteur);
+    }
+
+    // Lecture du coffre-fort au démarrage
+    pub fn charger_depuis_disque(&mut self) {
+        let mut secteur = [0u8; 512];
+        if let Ok(()) = partitions::lire_secteur_sec(0, &mut secteur) {
+            if &secteur[0..12] == VAULT_MAGIC {
+                if secteur[16] == 1 {
+                    let mut h = [0u8; 32];
+                    h.copy_from_slice(&secteur[32..64]);
+                    self.hash_archi = Some(h);
+                }
+                if secteur[17] == 1 {
+                    let mut h = [0u8; 32];
+                    h.copy_from_slice(&secteur[64..96]);
+                    self.hash_admin = Some(h);
+                }
+                crate::klog!("[SEC] Coffre /sec chargé depuis le stockage persistant");
+                if self.hash_archi.is_some() {
+                    crate::println!("[SEC] Coffre /sec : Clé Architecte scellée chargée.");
+                }
+                if self.hash_admin.is_some() {
+                    crate::println!("[SEC] Coffre /sec : Clé Administrateur chargée.");
+                }
+            }
+        }
+        zeroiser(&mut secteur);
+    }
+
+    // Scelle définitivement la clé Architecte à l'installation
     pub fn sceller_cle_architecte(&mut self, mdp: &str) -> Result<(), &'static str> {
         if self.hash_archi.is_some() {
             return Err("Clé Architecte déjà scellée. Commande désactivée.");
@@ -59,7 +114,8 @@ impl Session {
             return Err("Mot de passe trop court (4 caractères minimum).");
         }
         self.hash_archi = Some(sha256(mdp.as_bytes()));
-        crate::klog!("[SEC] Clé de sécurité Architecte scellée avec succès");
+        self.synchroniser_sur_disque();
+        crate::klog!("[SEC] Clé de sécurité Architecte scellée avec succès et persistée");
         Ok(())
     }
 
@@ -72,7 +128,8 @@ impl Session {
             return Err("Mot de passe trop court (4 caractères minimum).");
         }
         self.hash_admin = Some(sha256(mdp.as_bytes()));
-        crate::klog!("[SEC] Clé de sécurité Administrateur scellée par l'Architecte");
+        self.synchroniser_sur_disque();
+        crate::klog!("[SEC] Clé de sécurité Administrateur scellée par l'Architecte et persistée");
         Ok(())
     }
 
@@ -139,6 +196,10 @@ pub fn est_admin_initialise() -> bool {
     SESSION.lock().est_admin_initialise()
 }
 
+pub fn charger_depuis_disque() {
+    SESSION.lock().charger_depuis_disque();
+}
+
 pub fn sceller_cle_architecte(mdp: &str) -> Result<(), &'static str> {
     SESSION.lock().sceller_cle_architecte(mdp)
 }
@@ -170,7 +231,7 @@ fn comparaison_temps_constant(a: &[u8; 32], b: &[u8; 32]) -> bool {
     diff == 0
 }
 
-/// SHA-256 optimisé stack-only (aucune allocation heap, pour mots de passe <= 55 octets)
+/// SHA-256 optimisé stack-only (aucune allocation tas, mots de passe <= 55 octets)
 pub fn sha256(donnees: &[u8]) -> [u8; 32] {
     let k: [u32; 64] = [
         0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b, 0x59f111f1, 0x923f82a4, 0xab1c5ed5,

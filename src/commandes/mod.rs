@@ -24,3 +24,10 @@ pub mod pci;
 pub mod net;
 pub mod snf;
 pub mod probe;
+pub mod aide;
+pub mod qtr;
+pub mod dsk;
+pub mod tpf;
+pub mod df;
+pub mod echo;
+
