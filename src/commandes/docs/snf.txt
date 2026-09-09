@@ -1,0 +1,14 @@
+SNF(1)                      Manuel de référence QBX                      SNF(1)
+
+NOM
+     snf - Sonde de surveillance et d'interception réseau
+
+SYNOPSIS
+     snf
+
+DESCRIPTION
+     Active l'écoute des descripteurs DMA matériels de l'e1000.
+     Grâce au mode Promiscuous (UPE/MPE), capture et décode l'ensemble
+     des trames Ethernet (ARP, IPv4, IPv6) transitant sur le segment.
+
+QBX v0.1.0                      Révision 0.1                       SNF(1)

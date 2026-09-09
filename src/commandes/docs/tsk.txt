@@ -1,0 +1,14 @@
+TSK(1)                      Manuel de référence QBX                      TSK(1)
+
+NOM
+     tsk - Lister les tâches et processus du noyau
+
+SYNOPSIS
+     tsk
+
+DESCRIPTION
+     Interroge l'ordonnanceur coopératif pour afficher la table
+     des tâches enregistrées, incluant l'identifiant (TID),
+     l'état d'exécution (ACTIF, PRÊT, TERMINÉ) et le nom assigné.
+
+QBX v0.1.0                      Révision 0.1                      TSK(1)

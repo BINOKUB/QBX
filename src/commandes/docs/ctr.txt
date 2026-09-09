@@ -1,0 +1,12 @@
+CTR(1)                      Manuel de référence QBX                      CTR(1)
+
+NOM
+     ctr - Créer un répertoire
+
+SYNOPSIS
+     ctr <nom_repertoire>
+
+DESCRIPTION
+     Crée un nouveau répertoire vide dans le système de fichiers VFS.
+
+QBX v0.1.0                      Révision 0.1                      CTR(1)

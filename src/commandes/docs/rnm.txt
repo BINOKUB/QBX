@@ -1,0 +1,14 @@
+RNM(1)                      Manuel de référence QBX                      RNM(1)
+
+NOM
+     rnm - Renommer un élément
+
+SYNOPSIS
+     rnm <ancien_fichier> <nouveau_fichier>
+     rnm -r <ancien_rep> <nouveau_rep>
+
+DESCRIPTION
+     Renomme un fichier ou un répertoire dans le dossier courant.
+     L'option '-r' est requise pour renommer un répertoire.
+
+QBX v0.1.0                      Révision 0.2                      RNM(1)

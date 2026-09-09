@@ -1,0 +1,15 @@
+SYNC(1)                     Manuel de référence QBX                     SYNC(1)
+
+NOM
+     sync - Synchronisation forcée des tampons VFS sur disque
+
+SYNOPSIS
+     sync
+
+DESCRIPTION
+     Force l'écriture et la synchronisation immédiates de l'arborescence
+     et des métadonnées du système de fichiers virtuel (VFS) vers la
+     partition /var sur le disque physique SATA via le moteur DMA AHCI.
+     Garantit l'intégrité du stockage persistant avant extinction.
+
+QBX v0.1.0                      Révision 0.1                     SYNC(1)

@@ -1,0 +1,15 @@
+TPF(1)                      Manuel de référence QBX                      TPF(1)
+
+NOM
+     tpf - Test de défaut de page (Page Fault #PF)
+
+SYNOPSIS
+     tpf
+
+DESCRIPTION
+     Déclenche délibérément une violation d'accès mémoire par écriture
+     volatile sur une adresse virtuelle non mappée (0xdeadbeef).
+     Permet de valider l'interception matérielle par l'interruption 14 (#PF),
+     la lecture exacte du registre CR2 et la prévention du triple fault.
+
+QBX v0.1.0                      Révision 0.1                      TPF(1)

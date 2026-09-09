@@ -1,0 +1,13 @@
+INF(1)                      Manuel de référence QBX                      INF(1)
+
+NOM
+     inf - Informations système
+
+SYNOPSIS
+     inf
+
+DESCRIPTION
+     Affiche les informations de version, d'architecture et de
+     configuration matérielle du noyau QBX.
+
+QBX v0.1.0                      Révision 0.1                      INF(1)

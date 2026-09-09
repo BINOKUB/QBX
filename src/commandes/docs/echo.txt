@@ -1,0 +1,13 @@
+ECHO(1)                     Manuel de référence QBX                     ECHO(1)
+
+NOM
+     echo - Afficher du texte ou rediriger vers un fichier
+
+SYNOPSIS
+     echo [texte] [> fichier | >> fichier]
+
+DESCRIPTION
+     Affiche la chaîne passée en argument sur la sortie standard.
+     Supporte la redirection '>' (écrasement) et '>>' (ajout) vers le VFS.
+
+QBX v0.1.0                      Révision 0.1                     ECHO(1)

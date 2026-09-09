@@ -1,0 +1,14 @@
+CPR(1)                      Manuel de référence QBX                      CPR(1)
+
+NOM
+     cpr - Copier un fichier ou un répertoire
+
+SYNOPSIS
+     cpr <source> <destination>
+     cpr -r <rep_source> <rep_destination>
+
+DESCRIPTION
+     Duplique un fichier ou une arborescence complète dans le VFS.
+     L'option '-r' est requise pour copier récursivement un dossier.
+
+QBX v0.1.0                      Révision 0.1                      CPR(1)

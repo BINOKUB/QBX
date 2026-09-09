@@ -1,0 +1,30 @@
+EDT(1)                      Manuel de référence QBX                      EDT(1)
+
+NOM
+     edt - Éditeur de texte plein écran
+
+SYNOPSIS
+     edt [-l] [fichier]
+
+DESCRIPTION
+     Edt est un éditeur de texte interactif conçu pour QBX Centurion.
+     Il permet de créer, afficher et modifier des fichiers texte en mode
+     plein écran (80x23) avec persistance directe sur le disque SATA (/var).
+
+     Si aucun fichier n'est spécifié au démarrage, l'éditeur s'ouvre sur
+     un espace de travail vierge et anonyme ([Sans nom]). Les modifications
+     sont enregistrées sur le stockage persistant à la demande de l'utilisateur.
+
+OPTIONS
+     -l        Affiche les numéros de ligne dynamiques le long de la marge.
+     fichier   Nom du fichier à charger ou créer depuis le système VFS.
+
+TOUCHES DE CONTRÔLE
+     [F2]      Sauvegarde le tampon sur le disque dur (/var).
+     [F3]      Copie la ligne ou le bloc sélectionné dans le presse-papier.
+     [F4]      Coupe la ligne ou le bloc sélectionné vers le presse-papier.
+     [F5]      Colle le contenu du presse-papier à la position du curseur.
+     [F6]      Pose ou efface un point d'ancrage pour délimiter un bloc.
+     [ESC]     Quitte l'éditeur et revient au shell.
+
+QBX v0.1.0                      Révision 0.2                      EDT(1)

@@ -1,0 +1,12 @@
+DPC(1)                      Manuel de référence QBX                      DPC(1)
+
+NOM
+     dpc - Déplacer un élément
+
+SYNOPSIS
+     dpc <source> <destination>
+
+DESCRIPTION
+     Déplace un fichier ou un dossier vers un nouvel emplacement du VFS.
+
+QBX v0.1.0                      Révision 0.1                      DPC(1)

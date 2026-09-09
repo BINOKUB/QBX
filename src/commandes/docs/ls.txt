@@ -1,0 +1,13 @@
+LS(1)                       Manuel de référence QBX                       LS(1)
+
+NOM
+     ls - Lister les fichiers et répertoires
+
+SYNOPSIS
+     ls
+
+DESCRIPTION
+     Parcourt et liste les éléments enregistrés dans le système de
+     fichiers persistant (VFS sur /var). Affiche le type, l'heure et la taille.
+
+QBX v0.1.0                      Révision 0.2                      LS(1)

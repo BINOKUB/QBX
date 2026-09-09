@@ -1,0 +1,13 @@
+QTR(1)                      Manuel de référence QBX                      QTR(1)
+
+NOM
+     qtr - Quitter le système
+
+SYNOPSIS
+     qtr
+
+DESCRIPTION
+     Arrête proprement le noyau QBX en envoyant un signal de
+     coupure d'alimentation sur les ports ACPI/APM.
+
+QBX v0.1.0                      Révision 0.1                      QTR(1)

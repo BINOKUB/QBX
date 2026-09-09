@@ -1,0 +1,23 @@
+SU(1)                       Manuel de référence QBX                       SU(1)
+
+NOM
+     su - Gestion des niveaux de privilèges et d'autorité
+
+SYNOPSIS
+     su [-adm | -arc | -d]
+
+DESCRIPTION
+     Bascule le niveau d'autorité de la session courante après
+     vérification du mot de passe associé (saisie masquée par *).
+     Le symbole de l'invite de commande reflète le rang actif :
+
+       '>' Opérateur      Mode restreint de surveillance et d'exploitation.
+       '#' Administrateur Gestion avancée et opérations de défense (-adm).
+       '!' Architecte     Contrôle matériel, mémoire et noyau (-arc).
+
+OPTIONS
+     -adm    Élévation au palier Administrateur.
+     -arc    Élévation au palier Architecte.
+     -d      Rétrogradation immédiate d'un palier (identique à exit).
+
+QBX v0.1.0                      Révision 0.1                       SU(1)

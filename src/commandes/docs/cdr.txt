@@ -1,0 +1,12 @@
+CDR(1)                      Manuel de référence QBX                      CDR(1)
+
+NOM
+     cdr - Changer de répertoire courant
+
+SYNOPSIS
+     cdr <chemin>
+
+DESCRIPTION
+     Permet de naviguer dans l'arborescence des dossiers du VFS.
+
+QBX v0.1.0                      Révision 0.1                      CDR(1)

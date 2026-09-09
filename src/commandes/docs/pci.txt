@@ -1,0 +1,15 @@
+PCI(1)                      Manuel de référence QBX                      PCI(1)
+
+NOM
+     pci - Inspection des périphériques connectés au bus matériel
+
+SYNOPSIS
+     pci
+
+DESCRIPTION
+     Interroge le bus PCI via les registres d'E/S 0xCF8 et 0xCFC.
+     Affiche la topologie matérielle (Bus, Périphérique, Fonction),
+     l'identifiant constructeur (Vendor ID), le produit (Device ID),
+     l'adresse de base mémoire (BAR0) et cible les interfaces réseau.
+
+QBX v0.1.0                      Révision 0.1                       PCI(1)

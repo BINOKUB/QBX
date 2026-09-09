@@ -1,0 +1,13 @@
+TMPS(1)                     Manuel de référence QBX                     TMPS(1)
+
+NOM
+     tmps - Horloge système
+
+SYNOPSIS
+     tmps
+
+DESCRIPTION
+     Interroge le composant RTC (Real Time Clock) via les ports I/O
+     pour afficher l'heure actuelle du système.
+
+QBX v0.1.0                      Révision 0.1                     TMPS(1)

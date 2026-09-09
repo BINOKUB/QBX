@@ -1,0 +1,21 @@
+VER(1)                      Manuel de référence QBX                      VER(1)
+
+NOM
+     ver - Identification, version et architecture système
+
+SYNOPSIS
+     ver [-asnmrv]
+
+DESCRIPTION
+     Restitue les informations d'identification du noyau QBX.
+     Sans argument, affiche un résumé synthétique.
+
+OPTIONS
+     -a      Affiche l'ensemble des champs d'identification.
+     -s      Affiche le nom du système (QBX).
+     -n      Affiche le nom d'hôte de la machine (qbx-box).
+     -r      Affiche le niveau de révision ou release.
+     -v      Affiche la description interne du noyau.
+     -m, -p  Affiche l'architecture matérielle cible (x86_64).
+
+QBX v0.1.0                      Révision 0.1                      VER(1)

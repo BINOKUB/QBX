@@ -1,0 +1,25 @@
+MMR(1)                      Manuel de référence QBX                      MMR(1)
+
+NOM
+     mmr - Statistiques et gestion de la mémoire vive (Heap)
+
+SYNOPSIS
+     mmr [-e | -t | -c]
+
+DESCRIPTION
+     Interroge l'allocateur global du noyau pour afficher l'état
+     en temps réel du tas (Heap) de QBX :
+       - Plage d'adresses virtuelles allouée
+       - Capacité totale configurée
+       - Espace actuellement consommé et pourcentage
+       - Espace mémoire libre disponible
+
+OPTIONS
+     -e      Alloue et mappe manuellement 1 Mio (1024 Ko) de pages
+             physiques supplémentaires pour agrandir le tas.
+     -t      Épreuve de saturation progressive par blocs de 64 Ko
+             pour contraindre la mémoire sous le seuil critique (< 256 Ko).
+     -c      Libère intégralement les blocs de l'épreuve de saturation
+             (-t) et restitue l'espace au tas.
+
+QBX v0.1.0                      Révision 0.3                      MMR(1)

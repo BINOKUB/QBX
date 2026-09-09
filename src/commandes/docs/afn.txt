@@ -1,0 +1,16 @@
+AFN(1)                      Manuel de référence QBX                      AFN(1)
+
+NOM
+     afn - Journal des messages noyau et d'audit
+
+SYNOPSIS
+     afn [-c]
+
+DESCRIPTION
+     Affiche l'ensemble des événements et messages consignés dans le
+     journal d'audit persistant (/var).
+
+OPTIONS
+     -c      Purge le journal d'audit physique (réservé Administrateur / Architecte).
+
+QBX v0.1.0                      Révision 0.2                      AFN(1)

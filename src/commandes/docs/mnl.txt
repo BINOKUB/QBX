@@ -1,0 +1,12 @@
+MNL(1)                      Manuel de référence QBX                      MNL(1)
+
+NOM
+     mnl - Manuel de référence système
+
+SYNOPSIS
+     mnl <commande>
+
+DESCRIPTION
+     Affiche la page de manuel formatée d'une commande système avec pagination.
+
+QBX v0.1.0                      Révision 0.1                      MNL(1)

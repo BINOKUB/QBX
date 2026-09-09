@@ -1,0 +1,13 @@
+DF(1)                       Manuel de référence QBX                       DF(1)
+
+NOM
+     df - Table des partitions LBA et points de montage
+
+SYNOPSIS
+     df
+
+DESCRIPTION
+     Affiche la table des partitions matérielles du disque SATA (/sec, /var),
+     les plages de blocs LBA allouées ainsi que l'état d'occupation.
+
+QBX v0.1.0                      Révision 0.1                       DF(1)

@@ -1,0 +1,14 @@
+SPP(1)                      Manuel de référence QBX                      SPP(1)
+
+NOM
+     spp - Supprimer un élément du système de fichiers
+
+SYNOPSIS
+     spp <nom_fichier>
+     spp -r <nom_repertoire>
+
+DESCRIPTION
+     Supprime définitivement un fichier ou un dossier du stockage persistant.
+     L'option '-r' est obligatoire pour détruire un répertoire.
+
+QBX v0.1.0                      Révision 0.2                      SPP(1)

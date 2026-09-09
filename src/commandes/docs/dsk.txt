@@ -1,0 +1,13 @@
+DSK(1)                      Manuel de référence QBX                      DSK(1)
+
+NOM
+     dsk - Diagnostic et statut du contrôleur AHCI/SATA
+
+SYNOPSIS
+     dsk
+
+DESCRIPTION
+     Interroge le contrôleur AHCI sur le bus PCI et affiche les paramètres
+     du disque dur (modèle, numéro de série, secteurs LBA, capacité).
+
+QBX v0.1.0                      Révision 0.1                      DSK(1)

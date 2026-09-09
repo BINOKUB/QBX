@@ -1,0 +1,16 @@
+CAT(1)                      Manuel de référence QBX                      CAT(1)
+
+NOM
+     cat - Afficher le contenu d'un fichier
+
+SYNOPSIS
+     cat <nom_fichier> [-ppp]
+
+DESCRIPTION
+     Recherche un fichier texte dans le système de fichiers (VFS)
+     et imprime son contenu brut sur la sortie standard.
+
+OPTIONS
+     -ppp    Active la pagination page par page pour les fichiers longs.
+
+QBX v0.1.0                      Révision 0.2                      CAT(1)
