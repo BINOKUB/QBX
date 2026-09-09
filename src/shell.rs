@@ -321,6 +321,10 @@ impl Shell {
                 let reste_args = if entree.len() > 2 { entree[2..].trim() } else { "" };
                 commandes::ls::executer(reste_args);
             }
+            "cat" => {
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::cat::executer(reste_args);
+            }
             "ctr" => {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 commandes::ctr::executer(reste_args);

@@ -35,10 +35,10 @@ pub fn executer(arguments: &str) {
         }
     };
 
-    if nom.contains('/') {
-        println!("Erreur : Le nom ne peut pas contenir le caractère '/'.");
-        return;
-    }
+   // if nom.contains('/') {
+   //     println!("Erreur : Le nom ne peut pas contenir le caractère '/'.");
+    //    return;
+  //  }
 
     // Contrôle RBAC : la suppression de répertoires (-r) exige le rang Administrateur (#) ou Architecte (!)
     if dossier_attendu && !verifier_privilege(NiveauPrivilege::Administrateur) {

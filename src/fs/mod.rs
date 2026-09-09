@@ -57,20 +57,62 @@ impl FileSystem {
         resultat
     }
 
-    pub fn ecrire(&mut self, nom: &str, donnees: Vec<u8>) -> bool {
-        let cwd_clone = self.cwd.clone();
+/// Décompose un chemin (ex: "dossier/fichier.txt" ou "/var/log.txt") en (dossier_parent, nom_fichier)
+    fn decomposer_chemin(&self, chemin: &str) -> Option<(Vec<String>, String)> {
+        let chemin = chemin.trim();
+        if chemin.is_empty() {
+            return None;
+        }
+
+        let mut segments: Vec<&str> = chemin
+            .split('/')
+            .filter(|s| !s.is_empty() && *s != ".")
+            .collect();
+
+        if segments.is_empty() {
+            return None;
+        }
+
+        let nom_fichier = String::from(segments.pop()?);
+
+        let mut pile: Vec<String> = if chemin.starts_with('/') {
+            Vec::new()
+        } else {
+            self.cwd.clone()
+        };
+
+        for seg in segments {
+            if seg == ".." {
+                pile.pop();
+            } else {
+                pile.push(String::from(seg));
+            }
+        }
+
+        Some((pile, nom_fichier))
+    }
+
+
+   pub fn ecrire(&mut self, chemin: &str, donnees: Vec<u8>) -> bool {
+        let (dossier_parent, nom_fichier) = match self.decomposer_chemin(chemin) {
+            Some(res) => res,
+            None => return false,
+        };
+
         let h = Self::date_actuelle();
-        if let Some(Node::Directory { children, .. }) = self.acceder_noeud_mut(&cwd_clone) {
-            children.insert(String::from(nom), Node::nouveau_fichier(donnees, h));
+        if let Some(Node::Directory { children, .. }) = self.acceder_noeud_mut(&dossier_parent) {
+            children.insert(nom_fichier, Node::nouveau_fichier(donnees, h));
             self.synchroniser_sur_disque();
             return true;
         }
         false
     }
 
-    pub fn lire(&self, nom: &str) -> Option<Vec<u8>> {
-        if let Some(Node::Directory { children, .. }) = self.acceder_noeud(&self.cwd) {
-            if let Some(Node::File { data, .. }) = children.get(nom) {
+ pub fn lire(&self, chemin: &str) -> Option<Vec<u8>> {
+        let (dossier_parent, nom_fichier) = self.decomposer_chemin(chemin)?;
+
+        if let Some(Node::Directory { children, .. }) = self.acceder_noeud(&dossier_parent) {
+            if let Some(Node::File { data, .. }) = children.get(&nom_fichier) {
                 return Some(data.clone());
             }
         }
@@ -90,6 +132,46 @@ impl FileSystem {
         }
         resultats
     }
+
+pub fn lister_cible(&self, chemin: &str) -> Result<Vec<(String, usize, bool, Horodatage)>, &'static str> {
+        let chemin = chemin.trim();
+        if chemin.is_empty() || chemin == "." {
+            return Ok(self.lister_courant());
+        }
+
+        let mut pile: Vec<String> = if chemin.starts_with('/') {
+            Vec::new()
+        } else {
+            self.cwd.clone()
+        };
+
+        for segment in chemin.split('/') {
+            if segment.is_empty() || segment == "." {
+                continue;
+            } else if segment == ".." {
+                pile.pop();
+            } else {
+                pile.push(String::from(segment));
+            }
+        }
+
+        match self.acceder_noeud(&pile) {
+            Some(Node::Directory { children, .. }) => {
+                let mut resultats = Vec::new();
+                for (nom, node) in children {
+                    let (taille, est_dossier) = match node {
+                        Node::File { data, .. } => (data.len(), false),
+                        Node::Directory { children, .. } => (children.len(), true),
+                    };
+                    resultats.push((nom.clone(), taille, est_dossier, node.horodatage()));
+                }
+                Ok(resultats)
+            }
+            Some(Node::File { .. }) => Err("est_fichier"),
+            None => Err("introuvable"),
+        }
+    }
+
 
     pub fn creer_repertoire(&mut self, nom: &str) -> bool {
         if nom.is_empty() {
@@ -519,6 +601,10 @@ pub fn ecrire(nom: &str, donnees: &[u8]) {
 
 pub fn lister() -> Vec<(String, usize, bool, Horodatage)> {
     SYSTEME_FICHIERS.lock().lister_courant()
+}
+
+pub fn lister_cible(chemin: &str) -> Result<Vec<(String, usize, bool, Horodatage)>, &'static str> {
+    SYSTEME_FICHIERS.lock().lister_cible(chemin)
 }
 
 pub fn chemin_actuel() -> String {

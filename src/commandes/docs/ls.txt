@@ -4,15 +4,23 @@ NOM
      ls - Lister les fichiers et répertoires
 
 SYNOPSIS
-     ls [-l]
+     ls [-l] [repertoire]
 
 DESCRIPTION
-     Parcourt et liste les éléments enregistrés dans le système de
-     fichiers persistant (VFS sur /var).
+     Parcourt et liste les éléments d'un répertoire dans le système de
+     fichiers (VFS). Si aucun répertoire n'est spécifié, la commande liste
+     le dossier courant. Permet d'inspecter une arborescence distante
+     sans changer le répertoire de travail.
 
 OPTIONS
      -l      Format long détaillant les permissions (drwxr-xr-x / -rw-r--r--),
              le nombre de liens, le propriétaire (qbx:qbx), la taille en octets,
              l'horodatage RTC et le nom de l'élément.
 
-QBX v0.1.0                      Révision 0.3                      LS(1)
+EXEMPLES
+     ls
+     ls -l
+     ls docs
+     ls -l /var
+
+QBX v0.1.0                      Révision 0.4                      LS(1)
