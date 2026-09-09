@@ -1,20 +1,19 @@
-// QBX Commande - Révision 0.9
+// QBX Commande - Révision 1.0
 // Fichier : src/commandes/mnl.rs
-// Description : Manuel du système QBX avec support du pager modulaire et couverture des outils de diagnostic mémoire
+// Description : Manuel du système QBX avec support du pager et couverture complète des commandes
 
 use crate::println;
 use crate::commandes::pager;
 
-// --- [FONCTION 1 : executer] ---
-// Description : Affiche la documentation d'une commande passée en argument au format classique.
 pub fn executer(commande: &str) {
     let cmd = commande.trim();
 
     if cmd.is_empty() {
         println!("Usage : mnl <commande>");
         println!("Commandes disponibles :");
-        println!("  ntr, inf, tmps, edt, ls, cat, ctr, cdr, spp, rnm,");
-        println!("  cpr, dpc, afn, mmr, ver, tpf, tsk, mnl, qtr, pci");
+        println!("  ntr, inf, tmps, edt, ls, cat, echo, ctr, cdr, spp,");
+        println!("  rnm, cpr, dpc, df, dsk, afn, mmr, ver, tpf, tsk,");
+        println!("  su, pci, snf, mnl, qtr");
         return;
     }
 
@@ -52,7 +51,7 @@ pub fn executer(commande: &str) {
             println!("     pour afficher l'heure actuelle du système.\n");
             println!("QBX v0.1.0                      Révision 0.1                     TMPS(1)");
         }
-            "tsk" => {
+        "tsk" => {
             println!("TSK(1)                      Manuel de référence QBX                      TSK(1)\n");
             println!("NOM");
             println!("     tsk - Lister les tâches et processus du noyau\n");
@@ -64,7 +63,7 @@ pub fn executer(commande: &str) {
             println!("     l'état d'exécution (ACTIF, PRÊT, TERMINÉ) et le nom assigné.\n");
             println!("QBX v0.1.0                      Révision 0.1                      TSK(1)");
         }
-            "su" => {
+        "su" => {
             println!("SU(1)                       Manuel de référence QBX                       SU(1)\n");
             println!("NOM");
             println!("     su - Gestion des niveaux de privilèges et d'autorité\n");
@@ -83,7 +82,7 @@ pub fn executer(commande: &str) {
             println!("     -d      Rétrogradation immédiate d'un palier (identique à exit).\n");
             println!("QBX v0.1.0                      Révision 0.1                       SU(1)");
         }
-            "pci" => {
+        "pci" => {
             println!("PCI(1)                      Manuel de référence QBX                      PCI(1)\n");
             println!("NOM");
             println!("     pci - Inspection des périphériques connectés au bus matériel\n");
@@ -96,7 +95,7 @@ pub fn executer(commande: &str) {
             println!("     l'adresse de base mémoire (BAR0) et cible les interfaces réseau.\n");
             println!("QBX v0.1.0                      Révision 0.1                       PCI(1)");
         }
-            "snf" => {
+        "snf" => {
             println!("SNF(1)                      Manuel de référence QBX                      SNF(1)\n");
             println!("NOM");
             println!("     snf - Sonde de surveillance et d'interception réseau\n");
@@ -109,52 +108,49 @@ pub fn executer(commande: &str) {
             println!("QBX v0.1.0                      Révision 0.1                       SNF(1)");
         }
         "edt" => {
-            let texte_manuel = "EDT(1)                      Manuel de référence QBX                      EDT(1)\n\
-\n\
-NOM\n\
-     edt - Éditeur de texte plein écran\n\
-\n\
-SYNOPSIS\n\
-     edt [-l] [fichier]\n\
-\n\
-DESCRIPTION\n\
-     Edt est un éditeur de texte orienté mémoire (RAMDisk) conçu pour QBX.\n\
-     Il est utilisé pour créer, afficher, modifier et manipuler des fichiers\n\
-     textuels en mode plein écran (80x23).\n\
-\n\
-     Si aucun fichier n'est spécifié au démarrage, l'éditeur s'ouvre sur\n\
-     un espace de travail vierge et anonyme ([Sans nom]) sans impacter le disque.\n\
-     Les modifications s'effectuent dans un tampon dynamique et ne sont enregistrées\n\
-     qu'à la demande explicite de l'utilisateur.\n\
-\n\
-OPTIONS\n\
-     Les options suivantes sont disponibles :\n\
-\n\
-     -l      Affiche les numéros de ligne dynamiques le long de la marge.\n\
-     fichier Spécifie le nom d'un fichier à charger depuis le système VFS.\n\
-\n\
-TOUCHES DE CONTRÔLE\n\
-     [F2]    Sauvegarde le tampon courant dans le système de fichiers.\n\
-     [F3]    Copie le bloc sélectionné (ou la ligne courante) dans le presse-papier.\n\
-     [F4]    Coupe le bloc sélectionné (ou la ligne courante) vers le presse-papier.\n\
-     [F5]    Colle le contenu du presse-papier à la position actuelle du curseur.\n\
-     [F6]    Pose ou efface un point d'ancrage pour délimiter un bloc de texte.\n\
-     [ESC]   Quitte l'éditeur de texte.\n\
-\n\
-QBX v0.1.0                      Révision 0.2                      EDT(1)";
+            let texte_manuel = r#"EDT(1)                      Manuel de référence QBX                      EDT(1)
+
+NOM
+     edt - Éditeur de texte plein écran
+
+SYNOPSIS
+     edt [-l] [fichier]
+
+DESCRIPTION
+     Edt est un éditeur de texte interactif conçu pour QBX Centurion.
+     Il permet de créer, afficher et modifier des fichiers texte en mode
+     plein écran (80x23) avec persistance directe sur le disque SATA (/var).
+
+     Si aucun fichier n'est spécifié au démarrage, l'éditeur s'ouvre sur
+     un espace de travail vierge et anonyme ([Sans nom]). Les modifications
+     sont enregistrées sur le stockage persistant à la demande de l'utilisateur.
+
+OPTIONS
+     -l        Affiche les numéros de ligne dynamiques le long de la marge.
+     fichier   Nom du fichier à charger ou créer depuis le système VFS.
+
+TOUCHES DE CONTRÔLE
+     [F2]      Sauvegarde le tampon sur le disque dur (/var).
+     [F3]      Copie la ligne ou le bloc sélectionné dans le presse-papier.
+     [F4]      Coupe la ligne ou le bloc sélectionné vers le presse-papier.
+     [F5]      Colle le contenu du presse-papier à la position du curseur.
+     [F6]      Pose ou efface un point d'ancrage pour délimiter un bloc.
+     [ESC]     Quitte l'éditeur et revient au shell.
+
+QBX v0.1.0                      Révision 0.2                      EDT(1)"#;
 
             pager::afficher_avec_pagination(texte_manuel);
         }
         "ls" => {
             println!("LS(1)                       Manuel de référence QBX                       LS(1)\n");
             println!("NOM");
-            println!("     ls - Lister les fichiers en mémoire\n");
+            println!("     ls - Lister les fichiers et répertoires\n");
             println!("SYNOPSIS");
             println!("     ls\n");
             println!("DESCRIPTION");
-            println!("     Parcourt et liste les fichiers enregistrés dans le système de");
-            println!("     fichiers VFS (RAMDisk). Affiche le nom et la taille en octets.\n");
-            println!("QBX v0.1.0                      Révision 0.1                      LS(1)");
+            println!("     Parcourt et liste les éléments enregistrés dans le système de");
+            println!("     fichiers persistant (VFS sur /var). Affiche le type, l'heure et la taille.\n");
+            println!("QBX v0.1.0                      Révision 0.2                      LS(1)");
         }
         "cat" => {
             println!("CAT(1)                      Manuel de référence QBX                      CAT(1)\n");
@@ -163,11 +159,22 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("SYNOPSIS");
             println!("     cat <nom_fichier> [-ppp]\n");
             println!("DESCRIPTION");
-            println!("     Recherche un fichier texte dans la mémoire virtuelle (VFS)");
+            println!("     Recherche un fichier texte dans le système de fichiers (VFS)");
             println!("     et imprime son contenu brut sur la sortie standard.\n");
             println!("OPTIONS");
             println!("     -ppp    Active la pagination page par page pour les fichiers longs.\n");
             println!("QBX v0.1.0                      Révision 0.2                      CAT(1)");
+        }
+        "echo" => {
+            println!("ECHO(1)                     Manuel de référence QBX                     ECHO(1)\n");
+            println!("NOM");
+            println!("     echo - Afficher du texte ou rediriger vers un fichier\n");
+            println!("SYNOPSIS");
+            println!("     echo [texte] [> fichier | >> fichier]\n");
+            println!("DESCRIPTION");
+            println!("     Affiche la chaîne passée en argument sur la sortie standard.");
+            println!("     Supporte la redirection '>' (écrasement) et '>>' (ajout) vers le VFS.\n");
+            println!("QBX v0.1.0                      Révision 0.1                     ECHO(1)");
         }
         "ctr" => {
             println!("CTR(1)                      Manuel de référence QBX                      CTR(1)\n");
@@ -197,9 +204,9 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("     spp <nom_fichier>");
             println!("     spp -r <nom_repertoire>\n");
             println!("DESCRIPTION");
-            println!("     Supprime définitivement un fichier ou un dossier du RAMDisk.");
+            println!("     Supprime définitivement un fichier ou un dossier du stockage persistant.");
             println!("     L'option '-r' est obligatoire pour détruire un répertoire.\n");
-            println!("QBX v0.1.0                      Révision 0.1                      SPP(1)");
+            println!("QBX v0.1.0                      Révision 0.2                      SPP(1)");
         }
         "rnm" => {
             println!("RNM(1)                      Manuel de référence QBX                      RNM(1)\n");
@@ -211,7 +218,7 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("DESCRIPTION");
             println!("     Renomme un fichier ou un répertoire dans le dossier courant.");
             println!("     L'option '-r' est requise pour renommer un répertoire.\n");
-            println!("QBX v0.1.0                      Révision 0.1                      RNM(1)");
+            println!("QBX v0.1.0                      Révision 0.2                      RNM(1)");
         }
         "cpr" => {
             println!("CPR(1)                      Manuel de référence QBX                      CPR(1)\n");
@@ -235,16 +242,40 @@ QBX v0.1.0                      Révision 0.2                      EDT(1)";
             println!("     Déplace un fichier ou un dossier vers un nouvel emplacement du VFS.\n");
             println!("QBX v0.1.0                      Révision 0.1                      DPC(1)");
         }
+        "df" => {
+            println!("DF(1)                       Manuel de référence QBX                       DF(1)\n");
+            println!("NOM");
+            println!("     df - Table des partitions LBA et points de montage\n");
+            println!("SYNOPSIS");
+            println!("     df\n");
+            println!("DESCRIPTION");
+            println!("     Affiche la table des partitions matérielles du disque SATA (/sec, /var),");
+            println!("     les plages de blocs LBA allouées ainsi que l'état d'occupation.\n");
+            println!("QBX v0.1.0                      Révision 0.1                       DF(1)");
+        }
+        "dsk" => {
+            println!("DSK(1)                      Manuel de référence QBX                      DSK(1)\n");
+            println!("NOM");
+            println!("     dsk - Diagnostic et statut du contrôleur AHCI/SATA\n");
+            println!("SYNOPSIS");
+            println!("     dsk\n");
+            println!("DESCRIPTION");
+            println!("     Interroge le contrôleur AHCI sur le bus PCI et affiche les paramètres");
+            println!("     du disque dur (modèle, numéro de série, secteurs LBA, capacité).\n");
+            println!("QBX v0.1.0                      Révision 0.1                      DSK(1)");
+        }
         "afn" => {
             println!("AFN(1)                      Manuel de référence QBX                      AFN(1)\n");
             println!("NOM");
-            println!("     afn - Journal des messages noyau\n");
+            println!("     afn - Journal des messages noyau et d'audit\n");
             println!("SYNOPSIS");
-            println!("     afn\n");
+            println!("     afn [-c]\n");
             println!("DESCRIPTION");
-            println!("     Affiche l'ensemble des événements, alertes et messages consignés");
-            println!("     dans le journal circulaire (klog) depuis le démarrage.\n");
-            println!("QBX v0.1.0                      Révision 0.1                      AFN(1)");
+            println!("     Affiche l'ensemble des événements et messages consignés dans le");
+            println!("     journal d'audit persistant (/var).\n");
+            println!("OPTIONS");
+            println!("     -c      Purge le journal d'audit physique (réservé Administrateur / Architecte).\n");
+            println!("QBX v0.1.0                      Révision 0.2                      AFN(1)");
         }
         "mmr" => {
             println!("MMR(1)                      Manuel de référence QBX                      MMR(1)\n");
