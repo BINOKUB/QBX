@@ -342,7 +342,10 @@ impl Shell {
                 let args_vec: Vec<&str> = reste_args.split_whitespace().collect();
                 commandes::dpc::executer(&args_vec);
             }
-            "afn" => commandes::afn::executer(),
+            "afn" => {
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::afn::executer(reste_args);
+            }
             "tsk" => commandes::tsk::executer(),
             "mmr" => {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
@@ -375,7 +378,7 @@ impl Shell {
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);
             }
-         }
+        }
     }
 
     fn reinitialiser(&mut self) {

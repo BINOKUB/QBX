@@ -1,6 +1,6 @@
 // QBX Kernel Log Module
 // Fichier : src/journal.rs
-// Description : Tampon circulaire de messages noyau avec découplage propre du verrou lors de la persistance sur /var
+// Description : Tampon circulaire de messages noyau avec purge et découplage propre du verrou sur /var
 
 use spin::Mutex;
 use alloc::string::String;
@@ -26,7 +26,6 @@ impl JournalNoyau {
         }
     }
 
-    // Ajoute le message en RAM uniquement et retourne les index calculés
     pub fn inserer_en_memoire(&mut self, message: String) -> (usize, usize) {
         let index = (self.debut + self.taille) % CAPACITE_MAX;
         self.messages[index] = Some(message);
@@ -37,6 +36,19 @@ impl JournalNoyau {
             self.debut = (self.debut + 1) % CAPACITE_MAX;
         }
         (index, self.taille)
+    }
+
+    pub fn purger(&mut self) {
+        for msg in self.messages.iter_mut() {
+            *msg = None;
+        }
+        self.debut = 0;
+        self.taille = 0;
+
+        // Réinitialisation du superbloc sur le disque (secteur 0 de /var)
+        let mut sb = [0u8; 512];
+        sb[0..12].copy_from_slice(MAGIC_JOURNAL);
+        let _ = partitions::ecrire_secteur_var(0, &sb);
     }
 
     pub fn charger_depuis_disque(&mut self) {
@@ -98,17 +110,20 @@ pub fn charger_depuis_disque() {
     JOURNAL.lock().charger_depuis_disque();
 }
 
+pub fn purger() {
+    let mut j = JOURNAL.lock();
+    j.purger();
+}
+
 pub fn enregistrer(message: &str) {
     let (h, m, s) = crate::commandes::tmps::obtenir_heure_actuelle();
     let ligne = alloc::format!("[{:02}:{:02}:{:02}] {}", h, m, s, message);
 
-    // 1. Mise à jour RAM sous verrou éphémère
     let (index, taille_actuelle) = {
         let mut j = JOURNAL.lock();
         j.inserer_en_memoire(ligne.clone())
-    }; // Le verrou JOURNAL est libéré ici
+    };
 
-    // 2. Persistance disque en dehors de tout verrouillage
     persister_sur_disque(index, &ligne, taille_actuelle);
 }
 
