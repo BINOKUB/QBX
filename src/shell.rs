@@ -307,6 +307,7 @@ impl Shell {
             "tmps" => commandes::tmps::executer(),
             "dsk" => commandes::dsk::executer(),
             "df" => commandes::df::executer(),
+            "sync" => commandes::sync::executer(),
             "cpr" => {
                 let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
                 let args_vec: Vec<&str> = reste_args.split_whitespace().collect();

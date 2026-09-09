@@ -20,6 +20,7 @@ pub fn executer() {
 [Stockage & Partitions]
   df            : Table des partitions LBA et points de montage (/sec, /var)
   dsk           : Diagnostic d'intégrité et géométrie du contrôleur SATA/AHCI
+  sync          : Forcer l'écriture immédiate des tampons VFS sur le disque (/var)
 
 [Système de Fichiers]
   ls            : Lister le contenu du dossier actif

@@ -548,3 +548,5 @@ pub fn charger_depuis_disque() {
 pub fn synchroniser() {
     SYSTEME_FICHIERS.lock().synchroniser_sur_disque();
 }
+
+
