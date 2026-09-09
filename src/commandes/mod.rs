@@ -23,3 +23,4 @@ pub mod tsk;
 pub mod pci;
 pub mod net;
 pub mod snf;
+pub mod probe;

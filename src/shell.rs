@@ -1,6 +1,6 @@
-// QBX Shell Module - Révision 1.5
+// QBX Shell Module - Révision 1.6
 // Fichier : src/shell.rs
-// Description : Interpréteur avec historique, redirection, saisie masquée (*) et provisioning clandestin
+// Description : Interpréteur avec historique, redirection, saisie masquée (*) et transmission d'arguments
 
 use crate::{commandes, print, println, power, vga_buffer, session};
 use spin::Mutex;
@@ -227,9 +227,14 @@ impl Shell {
     }
 
     fn evaluer_commande(&mut self, entree: &str) {
-        let mut parties = entree.split_whitespace();
-        let commande = parties.next().unwrap_or("");
-        let argument = parties.next().unwrap_or("");
+        let parties: Vec<&str> = entree.split_whitespace().collect();
+        if parties.is_empty() {
+            return;
+        }
+
+        let commande = parties[0];
+        let argument = parties.get(1).copied().unwrap_or("");
+        let args = &parties[1..];
 
         match commande {
             "initarch" => {
@@ -374,6 +379,9 @@ impl Shell {
             "snf" => {
                 commandes::snf::executer();
             }
+            "probe" => {
+                commandes::probe::executer(args);
+            }
             "aide" => {
                 println!("Commandes QBX :");
                 println!("  su       : Élévation de privilèges (su -adm, su -arc, su -d)");
@@ -383,9 +391,9 @@ impl Shell {
                 println!("  mmr      : Statistiques mémoire (-e/-t/-c réservés Architecte)");
                 println!("  afn      : Journal d'audit et messages noyau");
                 println!("  mnl      : Manuel système");
-                println!("  pci      : Auditer les périphériques du bus matériel");
                 println!("  net      : Statut de l'interface réseau et adresse MAC");
                 println!("  snf      : Interception de trames réseau (mode Promiscuous)");
+                println!("  probe    : Sonde d'injection ARP et découverte matérielle");
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);
