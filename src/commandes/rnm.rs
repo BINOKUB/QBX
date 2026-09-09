@@ -1,9 +1,10 @@
 // QBX Commande : rnm (Renommer)
 // Fichier : src/commandes/rnm.rs
-// Description : Renomme un fichier, ou un répertoire si l'option -r est présente
+// Description : Renomme un fichier, ou un répertoire si l'option -r est présente avec contrôle RBAC
 
 use alloc::vec::Vec;
 use crate::println;
+use crate::session::{verifier_privilege, NiveauPrivilege};
 
 pub fn executer(arguments: &str) {
     let args: Vec<&str> = arguments.split_whitespace().collect();
@@ -38,11 +39,20 @@ pub fn executer(arguments: &str) {
         return;
     }
 
+    // Contrôle RBAC : le renommage de répertoires (-r) exige le rang Administrateur (#) ou Architecte (!)
+    if dossier_attendu && !verifier_privilege(NiveauPrivilege::Administrateur) {
+        crate::klog!("[AUDIT] rnm: tentative non autorisée de renommage du répertoire '{}' (EPERM)", ancien);
+        println!("rnm: EPERM - Privilèges insuffisants pour renommer un répertoire (Administrateur requis).");
+        return;
+    }
+
     match crate::fs::renommer(ancien, nouveau, dossier_attendu) {
         Ok(()) => {
             if dossier_attendu {
+                crate::klog!("[VFS] Répertoire '{}' renommé en '{}'", ancien, nouveau);
                 println!("Répertoire '{}' renommé en '{}'.", ancien, nouveau);
             } else {
+                crate::klog!("[VFS] Fichier '{}' renommé en '{}'", ancien, nouveau);
                 println!("Fichier '{}' renommé en '{}'.", ancien, nouveau);
             }
         }

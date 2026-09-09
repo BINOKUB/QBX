@@ -4,10 +4,15 @@ NOM
      ls - Lister les fichiers et répertoires
 
 SYNOPSIS
-     ls
+     ls [-l]
 
 DESCRIPTION
      Parcourt et liste les éléments enregistrés dans le système de
-     fichiers persistant (VFS sur /var). Affiche le type, l'heure et la taille.
+     fichiers persistant (VFS sur /var).
 
-QBX v0.1.0                      Révision 0.2                      LS(1)
+OPTIONS
+     -l      Format long détaillant les permissions (drwxr-xr-x / -rw-r--r--),
+             le nombre de liens, le propriétaire (qbx:qbx), la taille en octets,
+             l'horodatage RTC et le nom de l'élément.
+
+QBX v0.1.0                      Révision 0.3                      LS(1)

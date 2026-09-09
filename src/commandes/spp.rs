@@ -1,9 +1,10 @@
 // QBX Commande : spp (Supprimer)
 // Fichier : src/commandes/spp.rs
-// Description : Supprime un fichier, ou un répertoire si l'option -r est présente
+// Description : Supprime un fichier, ou un répertoire si l'option -r est présente avec contrôle RBAC
 
 use alloc::vec::Vec;
 use crate::println;
+use crate::session::{verifier_privilege, NiveauPrivilege};
 
 pub fn executer(arguments: &str) {
     let args: Vec<&str> = arguments.split_whitespace().collect();
@@ -39,11 +40,20 @@ pub fn executer(arguments: &str) {
         return;
     }
 
+    // Contrôle RBAC : la suppression de répertoires (-r) exige le rang Administrateur (#) ou Architecte (!)
+    if dossier_attendu && !verifier_privilege(NiveauPrivilege::Administrateur) {
+        crate::klog!("[AUDIT] spp: tentative non autorisée de suppression du répertoire '{}' (EPERM)", nom);
+        println!("spp: EPERM - Privilèges insuffisants pour supprimer un répertoire (Administrateur requis).");
+        return;
+    }
+
     match crate::fs::supprimer(nom, dossier_attendu) {
         Ok(()) => {
             if dossier_attendu {
+                crate::klog!("[VFS] Répertoire '{}' supprimé", nom);
                 println!("Répertoire '{}' supprimé avec succès.", nom);
             } else {
+                crate::klog!("[VFS] Fichier '{}' supprimé", nom);
                 println!("Fichier '{}' supprimé avec succès.", nom);
             }
         }
