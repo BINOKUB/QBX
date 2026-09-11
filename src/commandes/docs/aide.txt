@@ -1,0 +1,27 @@
+AIDE(1)                       Manuel de référence QBX                       AIDE(1)
+
+NOM
+     aide - Afficher le sommaire complet des commandes disponibles
+
+SYNOPSIS
+     aide
+
+DESCRIPTION
+     La commande aide affiche la liste structurée de toutes les commandes et
+     fonctionnalités prises en charge par le système QBX Centurion, classées par 
+     catégories (Système, Stockage, Fichiers, Sécurité et Réseau).
+     
+     Le texte est automatiquement affiché via le système de pagination intégré 
+     pour permettre une lecture fluide.
+
+SECTIONS DU SOMMAIRE
+     - Système & Matériel : Gestion du processeur, RTC, tâches, mémoire et arrêt.
+     - Stockage & Partitions : Gestion LBA, diagnostic SATA/AHCI et synchronisation VFS.
+     - Système de Fichiers : Manipulation des fichiers, répertoires et éditeur EDT.
+     - Sécurité, Audit & Privilèges : Journaux d'audit et gestion des rôles.
+     - Réseau & Diagnostics : Analyse PCI, réseau, sondes et manuel (mnl).
+
+VOIR AUSSI
+     mnl(1)
+
+QBX v0.1.0                     Révision 0.2                                 AIDE(1)

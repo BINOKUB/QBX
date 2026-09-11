@@ -1,0 +1,16 @@
+PAGER(1)                      Manuel de référence QBX                      PAGER(1)
+
+NOM
+     pager - Système de pagination de texte intégré
+
+SYNOPSIS
+     pager
+
+DESCRIPTION
+     Module utilitaire interne utilisé pour afficher de longs flux textuels ou 
+     des fichiers page par page, évitant ainsi le débordement de l'écran.
+
+VOIR AUSSI
+     mnl(1), cat(1)
+
+QBX v0.1.0                     Révision 0.2                                  PAGER(1)

@@ -1,0 +1,16 @@
+NET(1)                        Manuel de référence QBX                        NET(1)
+
+NOM
+     net - État et configuration de l'interface réseau
+
+SYNOPSIS
+     net
+
+DESCRIPTION
+     La commande net affiche l'état actuel de la pile réseau, les adresses 
+     configurées, ainsi que les statistiques de base des interfaces connectées.
+
+VOIR AUSSI
+     snf(1), probe(1)
+
+QBX v0.1.0                     Révision 0.2                                  NET(1)

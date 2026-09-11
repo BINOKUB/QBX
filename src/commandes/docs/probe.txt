@@ -1,0 +1,16 @@
+PROBE(1)                      Manuel de référence QBX                      PROBE(1)
+
+NOM
+     probe - Émission de sondes et diagnostics
+
+SYNOPSIS
+     probe
+
+DESCRIPTION
+     La commande probe permet d'émettre des sondes pour tester la réactivité 
+     du réseau ou inspecter l'état des liaisons matérielles et logicielles.
+
+VOIR AUSSI
+     net(1), snf(1), pci(1)
+
+QBX v0.1.0                     Révision 0.2                                  PROBE(1)

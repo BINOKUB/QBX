@@ -12,6 +12,7 @@ struct PageManuel {
 
 static PAGES: &[PageManuel] = &[
     PageManuel { nom: "afn",  contenu: include_str!("docs/afn.txt") },
+    PageManuel { nom: "aide", contenu: include_str!("docs/aide.txt") },
     PageManuel { nom: "cat",  contenu: include_str!("docs/cat.txt") },
     PageManuel { nom: "cdr",  contenu: include_str!("docs/cdr.txt") },
     PageManuel { nom: "cpr",  contenu: include_str!("docs/cpr.txt") },
@@ -25,8 +26,11 @@ static PAGES: &[PageManuel] = &[
     PageManuel { nom: "ls",   contenu: include_str!("docs/ls.txt") },
     PageManuel { nom: "mmr",  contenu: include_str!("docs/mmr.txt") },
     PageManuel { nom: "mnl",  contenu: include_str!("docs/mnl.txt") },
+    PageManuel { nom: "net",  contenu: include_str!("docs/net.txt") },
     PageManuel { nom: "ntr",  contenu: include_str!("docs/ntr.txt") },
+    PageManuel { nom: "pager",contenu: include_str!("docs/pager.txt") },
     PageManuel { nom: "pci",  contenu: include_str!("docs/pci.txt") },
+    PageManuel { nom: "probe",contenu: include_str!("docs/probe.txt") },
     PageManuel { nom: "qtr",  contenu: include_str!("docs/qtr.txt") },
     PageManuel { nom: "rnm",  contenu: include_str!("docs/rnm.txt") },
     PageManuel { nom: "snf",  contenu: include_str!("docs/snf.txt") },
