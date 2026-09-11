@@ -226,7 +226,7 @@ impl Shell {
         }
     }
 
-    fn evaluer_commande(&mut self, entree: &str) {
+    pub fn evaluer_commande(&mut self, entree: &str) {
         let parties: Vec<&str> = entree.split_whitespace().collect();
         if parties.is_empty() {
             return;
@@ -274,7 +274,7 @@ impl Shell {
                         println!("qbx: Clé Architecte non configurée sur ce système.");
                         return;
                     }
-                    self.mode = ModeSaisie::MotDePasse(ActionSecurite::Elevation(session::NiveauPrivilege::Architecte));
+                   self.mode = ModeSaisie::MotDePasse(ActionSecurite::Elevation(session::NiveauPrivilege::Architecte));
                     self.cursor_mdp = 0;
                     session::zeroiser(&mut self.tampon_mdp);
                     print!("Mot de passe [Architecte] : ");
@@ -378,6 +378,13 @@ impl Shell {
             "echo" => {
                 let reste_args = if entree.len() > 4 { entree[4..].trim() } else { "" };
                 commandes::echo::executer(reste_args);
+            }
+             "log" => {
+                            commandes::log::executer();
+            }
+            "strt" => {
+                let reste_args = if entree.len() > 4 { entree[4..].trim() } else { "" };
+                crate::scripting::executer(reste_args);
             }
             cmd => {
                 println!("Commande inconnue : '{}'", cmd);

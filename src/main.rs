@@ -24,6 +24,7 @@ pub mod session;
 pub mod pci;
 pub mod net;
 pub mod storage;
+pub mod scripting;
 
 use bootloader::{BootInfo, entry_point};
 use core::panic::PanicInfo;

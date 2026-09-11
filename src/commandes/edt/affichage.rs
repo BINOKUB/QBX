@@ -1,6 +1,6 @@
-// QBX EDT Affichage - Révision 0.9
+// QBX EDT Affichage - Révision 1.0
 // Fichier : src/commandes/edt/affichage.rs
-// Description : Rendu direct en mémoire VGA (0xb8000) intégré avec Vec<u8> et gestion des fichiers anonymes
+// Description : Rendu direct en mémoire VGA (0xb8000) avec indicateur L/C et flash de sauvegarde
 
 use crate::commandes::edt::moteur::Editeur;
 
@@ -29,39 +29,72 @@ pub fn effacer_ecran_complet() {
 }
 
 // --- [FONCTION 3 : dessiner_barre_statut] ---
-// Description : Trace la ligne de séparation et affiche le nom du fichier ainsi que les raccourcis.
-pub fn dessiner_barre_statut(nom_fichier: &str) {
+// Description : Trace la ligne de statut avec position L/C, nom du fichier ou message de sauvegarde.
+pub fn dessiner_barre_statut(nom_fichier: &str, ligne: usize, col: usize, sauvegarde_flash: bool) {
     for x in 0..LARGEUR {
-        ecrire_vga(x, 23, b'-', 0x07);
+        ecrire_vga(x, 24, b'-', 0x07);
     }
 
-    let mut col = 0;
-    let entete = "=== QBX EDT | Fichier: ";
-    for b in entete.bytes() { ecrire_vga(col, 24, b, 0x0f); col += 1; }
-    for b in nom_fichier.bytes() { ecrire_vga(col, 24, b, 0x0e); col += 1; }
-    let suite = " | [F2] Sauvegarder | [ESC] Quitter ===";
-    for b in suite.bytes() {
-        if col < LARGEUR { ecrire_vga(col, 24, b, 0x0f); col += 1; }
+    let mut pos = 0;
+    let entete = if sauvegarde_flash {
+        alloc::string::String::from(" [ Sauvegarde avec succes ! ] ")
+    } else {
+        alloc::format!(" L:{} C:{} | Fichier: ", ligne + 1, col + 1)
+    };
+
+    for b in entete.bytes() {
+        if pos < LARGEUR {
+            ecrire_vga(pos, 24, b, if sauvegarde_flash { 0x0a } else { 0x0f });
+            pos += 1;
+        }
     }
-    while col < LARGEUR {
-        ecrire_vga(col, 24, b' ', 0x0f);
-        col += 1;
+
+    if !sauvegarde_flash {
+        for b in nom_fichier.bytes() {
+            if pos < LARGEUR {
+                ecrire_vga(pos, 24, b, 0x0e);
+                pos += 1;
+            }
+        }
+        let suite = " | [F2] Enregistrer | [ESC] Quitter";
+        for b in suite.bytes() {
+            if pos < LARGEUR {
+                ecrire_vga(pos, 24, b, 0x0f);
+                pos += 1;
+            }
+        }
+    }
+
+    while pos < LARGEUR {
+        ecrire_vga(pos, 24, b' ', 0x0f);
+        pos += 1;
     }
 }
 
 // --- [FONCTION 4 : dessiner_interface] ---
-// Description : Efface l'écran, gère le défilement vertical, l'affichage [Sans nom] et restitue le texte visible.
+// Description : Efface l'écran, calcule la position du curseur (L/C) et restitue le texte visible.
 pub fn dessiner_interface(editeur: &Editeur) {
     effacer_ecran_complet();
 
-    // Si aucun nom n'est défini (buffer anonyme), on affiche [Sans nom] dans la barre de statut
     let nom = if editeur.taille_nom > 0 {
         core::str::from_utf8(&editeur.nom_fichier[..editeur.taille_nom]).unwrap_or("inconnu")
     } else {
         "[Sans nom]"
     };
+
+    // Calculer la ligne et la colonne actuelles en fonction de la position du curseur
+    let mut ligne = 0;
+    let mut col = 0;
+    for i in 0..editeur.curseur_pos.min(editeur.tampon.len()) {
+        if editeur.tampon[i] == b'\n' {
+            ligne += 1;
+            col = 0;
+        } else {
+            col += 1;
+        }
+    }
     
-    dessiner_barre_statut(nom);
+    dessiner_barre_statut(nom, ligne, col, editeur.sauvegarde_flash);
 
     // 1. Trouver l'index du tampon où commence la première ligne visible (ligne_debut)
     let mut byte_debut_affichage = 0;

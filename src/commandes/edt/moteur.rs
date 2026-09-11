@@ -1,6 +1,6 @@
-// QBX EDT Engine - Révision 1.8
+// QBX EDT Engine - Révision 1.9
 // Fichier : src/commandes/edt/moteur.rs
-// Description : Moteur avec buffer anonyme au démarrage, support des chemins relatifs/absolus (64 octets), navigation 2D et sélection F6.
+// Description : Moteur avec buffer anonyme, indicateur L/C, flash de sauvegarde et gestion complète
 
 use alloc::vec::Vec;
 use spin::Mutex;
@@ -9,8 +9,6 @@ use crate::commandes::edt::affichage;
 use crate::fs;
 use crate::vga_buffer;
 
-// --- [STRUCTURE 1 : Editeur] ---
-// Description : Gère l'état complet de l'éditeur de texte, du presse-papier et du bloc de sélection.
 pub struct Editeur {
     pub tampon: Vec<u8>,
     pub curseur_pos: usize,
@@ -21,12 +19,11 @@ pub struct Editeur {
     pub taille_nom: usize,
     pub actif: bool,
     pub presse_papier: Vec<u8>,
-    pub selection_debut: Option<usize>, // Point d'ancrage pour le bloc (F6)
+    pub selection_debut: Option<usize>,
+    pub sauvegarde_flash: bool,
 }
 
 impl Editeur {
-    // --- [FONCTION 1 : new] ---
-    // Description : Instancie un nouvel objet Editeur réinitialisé avec presse-papier et sélection vide.
     pub const fn new() -> Self {
         Editeur {
             tampon: Vec::new(),
@@ -39,27 +36,24 @@ impl Editeur {
             actif: false,
             presse_papier: Vec::new(),
             selection_debut: None,
+            sauvegarde_flash: false,
         }
     }
 
-    // --- [FONCTION 2 : est_actif] ---
-    // Description : Renvoie un booléen indiquant si l'éditeur est en cours d'utilisation.
     pub fn est_actif(&self) -> bool {
         self.actif
     }
 
-    // --- [FONCTION 3 : lancer] ---
-    // Description : Initialise l'éditeur. Si aucun nom n'est fourni, ouvre un espace vierge anonyme.
     pub fn lancer(&mut self, option_l: bool, nom_fichier: &str) {
         self.option_l = option_l;
         self.curseur_pos = 0;
         self.ligne_debut = 0;
         self.actif = true;
         self.selection_debut = None;
+        self.sauvegarde_flash = false;
 
         let nom_trim = nom_fichier.trim();
         if nom_trim.is_empty() {
-            // Espace vierge et volatile (aucun fichier par défaut créé sur le disque)
             self.taille_nom = 0;
             self.nom_fichier = [0; 64];
             self.tampon = Vec::new();
@@ -70,7 +64,6 @@ impl Editeur {
             self.nom_fichier = [0; 64];
             self.nom_fichier[..self.taille_nom].copy_from_slice(&bytes[..self.taille_nom]);
 
-            // fs::lire résout automatiquement les dossiers parents via decomposer_chemin
             if let Some(contenu) = fs::lire(nom_trim) {
                 self.tampon = contenu.to_vec();
                 self.taille_texte = self.tampon.len();
@@ -85,25 +78,19 @@ impl Editeur {
         affichage::dessiner_interface(self);
     }
 
-    // --- [FONCTION 4 : quitter] ---
-    // Description : Désactive l'éditeur, efface proprement l'écran VGA et restitue le prompt.
     pub fn quitter(&mut self) {
         self.actif = false;
         vga_buffer::clear_screen();
         crate::print!("qbx> ");
     }
 
-    // --- [FONCTION 5 : sauvegarder] ---
-    // Description : Alias pour enregistrer le fichier.
     pub fn sauvegarder(&mut self) {
         self.enregistrer();
     }
 
-    // --- [FONCTION 6 : enregistrer] ---
-    // Description : Écrit le contenu dans le VFS via fs::ecrire (décomposition automatique du chemin).
     pub fn enregistrer(&mut self) {
         if self.taille_nom == 0 {
-            let defaut = "sans_titre.txt";
+            let defaut = "script.sh";
             let bytes = defaut.as_bytes();
             self.taille_nom = bytes.len().min(64);
             self.nom_fichier[..self.taille_nom].copy_from_slice(&bytes[..self.taille_nom]);
@@ -112,12 +99,11 @@ impl Editeur {
         if self.taille_nom > 0 {
             if let Ok(nom) = core::str::from_utf8(&self.nom_fichier[..self.taille_nom]) {
                 fs::ecrire(nom, &self.tampon);
+                self.sauvegarde_flash = true;
             }
         }
     }
 
-    // --- [FONCTION 7 : inserer_caractere] ---
-    // Description : Insère un caractère ou un saut de ligne dans le tampon.
     pub fn inserer_caractere(&mut self, c: char) {
         if c == '\n' || (c >= ' ' && c <= '~') {
             if self.curseur_pos <= self.tampon.len() {
@@ -128,8 +114,6 @@ impl Editeur {
         }
     }
 
-    // --- [FONCTION 8 : supprimer_caractere] ---
-    // Description : Supprime le caractère situé juste avant le curseur (Backspace).
     pub fn supprimer_caractere(&mut self) {
         if self.curseur_pos > 0 && !self.tampon.is_empty() {
             self.curseur_pos -= 1;
@@ -138,8 +122,6 @@ impl Editeur {
         }
     }
 
-    // --- [FONCTION 9 : deplacer_curseur] ---
-    // Description : Convertit un mouvement 2D en index absolu dans le vecteur texte.
     pub fn deplacer_curseur(&mut self, dx: isize, dy: isize) {
         if dx == -1 && self.curseur_pos > 0 {
             self.curseur_pos -= 1;
@@ -202,8 +184,6 @@ impl Editeur {
         affichage::dessiner_interface(self);
     }
 
-    // --- [FONCTION 10 : obtenir_limites_ligne] ---
-    // Description : Trouve l'index de début et de fin de la ligne où se trouve le curseur.
     fn obtenir_limites_ligne(&self) -> (usize, usize) {
         let mut debut = 0;
         for i in (0..self.curseur_pos).rev() {
@@ -222,8 +202,6 @@ impl Editeur {
         (debut, fin)
     }
 
-    // --- [FONCTION 11 : basculer_selection] ---
-    // Description : Touche F6 - Pose ou efface le point d'ancrage pour délimiter un bloc de texte.
     pub fn basculer_selection(&mut self) {
         if self.selection_debut.is_some() {
             self.selection_debut = None;
@@ -233,8 +211,6 @@ impl Editeur {
         affichage::dessiner_interface(self);
     }
 
-    // --- [FONCTION 12 : copier_selection_ou_ligne] ---
-    // Description : Touche F3 - Copie le bloc sélectionné (F6) ou la ligne courante.
     pub fn copier_selection_ou_ligne(&mut self) {
         self.presse_papier.clear();
         
@@ -250,8 +226,6 @@ impl Editeur {
         }
     }
 
-    // --- [FONCTION 13 : couper_selection_ou_ligne] ---
-    // Description : Touche F4 - Coupe le bloc sélectionné (F6) ou la ligne courante.
     pub fn couper_selection_ou_ligne(&mut self) {
         if let Some(debut) = self.selection_debut {
             let min = debut.min(self.curseur_pos);
@@ -279,8 +253,6 @@ impl Editeur {
         }
     }
 
-    // --- [FONCTION 14 : coller] ---
-    // Description : Touche F5 - Insère le contenu du presse-papier.
     pub fn coller(&mut self) {
         if self.presse_papier.is_empty() { return; }
         
@@ -295,8 +267,6 @@ impl Editeur {
         affichage::dessiner_interface(self);
     }
 
-    // --- [FONCTION 15 : supprimer_caractere_droit] ---
-    // Description : Touche DEL (Suppr) - Supprime le caractère sous le curseur.
     pub fn supprimer_caractere_droit(&mut self) {
         if self.curseur_pos < self.taille_texte {
             self.tampon.remove(self.curseur_pos);
@@ -306,8 +276,6 @@ impl Editeur {
         }
     }
 
-    // --- [FONCTION 16 : ajuster_defilement] ---
-    // Description : Recale la vue pour maintenir le curseur visible.
     pub fn ajuster_defilement(&mut self) {
         let mut ligne_curseur = 0;
         let limit = self.curseur_pos.min(self.tampon.len());
@@ -325,9 +293,10 @@ impl Editeur {
         }
     }
 
-    // --- [FONCTION 17 : traiter_touche] ---
-    // Description : Analyse les touches reçues.
     pub fn traiter_touche(&mut self, key: DecodedKey) -> bool {
+        // Efface le flash de sauvegarde dès qu'une action/frappe survient
+        self.sauvegarde_flash = false;
+
         match key {
             DecodedKey::RawKey(KeyCode::Escape) | DecodedKey::Unicode('\x1b') => {
                 self.quitter();
@@ -336,6 +305,7 @@ impl Editeur {
             DecodedKey::RawKey(KeyCode::F2) => {
                 self.enregistrer();
                 affichage::dessiner_interface(self);
+                return false;
             }
             DecodedKey::RawKey(KeyCode::F3) => {
                 self.copier_selection_ou_ligne(); 
@@ -373,5 +343,4 @@ impl Editeur {
     }
 }
 
-// --- [STATIC 1 : EDITEUR] ---
 pub static EDITEUR: Mutex<Editeur> = Mutex::new(Editeur::new());
