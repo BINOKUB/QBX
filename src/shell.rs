@@ -379,6 +379,10 @@ impl Shell {
                 let reste_args = if entree.len() > 4 { entree[4..].trim() } else { "" };
                 commandes::echo::executer(reste_args);
             }
+            "sys" => {
+                let reste_args = if entree.len() > 3 { entree[3..].trim() } else { "" };
+                commandes::sys::executer(reste_args);
+            }
              "log" => {
                             commandes::log::executer();
             }
